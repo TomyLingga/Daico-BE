@@ -17,3 +17,30 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+Route::group(['middleware' => 'levelnine.checker'], function () {
+    //allocation
+    Route::get('allocation', [App\Http\Controllers\Api\Config\AllocationController::class, 'index']);
+    Route::get('allocation/get/{id}', [App\Http\Controllers\Api\Config\AllocationController::class, 'show']);
+    Route::post('allocation/add', [App\Http\Controllers\Api\Config\AllocationController::class, 'store']);
+    Route::post('allocation/update/{id}', [App\Http\Controllers\Api\Config\AllocationController::class, 'update']);
+    //cCenter
+    Route::get('cCenter', [App\Http\Controllers\Api\Config\cCentreController::class, 'index']);
+    Route::get('cCenter/get/{id}', [App\Http\Controllers\Api\Config\cCentreController::class, 'show']);
+    Route::post('cCenter/add', [App\Http\Controllers\Api\Config\cCentreController::class, 'store']);
+    Route::post('cCenter/update/{id}', [App\Http\Controllers\Api\Config\cCentreController::class, 'update']);
+    //mReport
+    Route::get('mReport', [App\Http\Controllers\Api\Config\mReportController::class, 'index']);
+    Route::get('mReport/get/{id}', [App\Http\Controllers\Api\Config\mReportController::class, 'show']);
+    Route::post('mReport/add', [App\Http\Controllers\Api\Config\mReportController::class, 'store']);
+    Route::post('mReport/update/{id}', [App\Http\Controllers\Api\Config\mReportController::class, 'update']);
+    //plant
+    Route::get('plant', [App\Http\Controllers\Api\Config\PlantController::class, 'index']);
+    Route::get('plant/get/{id}', [App\Http\Controllers\Api\Config\PlantController::class, 'show']);
+    Route::post('plant/add', [App\Http\Controllers\Api\Config\PlantController::class, 'store']);
+    Route::post('plant/update/{id}', [App\Http\Controllers\Api\Config\PlantController::class, 'update']);
+});
+
+Route::fallback(function () {
+    return response()->json(['code' => 404, 'message' => 'URL not Found'], 404);
+});

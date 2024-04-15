@@ -33,7 +33,7 @@ class AllocationController extends Controller
                 'message' => $this->messageFail,
                 'err' => $e->getTrace()[0],
                 'errMsg' => $e->getMessage(),
-                'code' => 500,
+                // 'code' => 500,
                 'success' => false,
             ], 500);
         }
@@ -57,7 +57,7 @@ class AllocationController extends Controller
                 'message' => $this->messageFail,
                 'err' => $e->getTrace()[0],
                 'errMsg' => $e->getMessage(),
-                'code' => 500,
+                // 'code' => 500,
                 'success' => false,
             ], 500);
         }
@@ -75,7 +75,7 @@ class AllocationController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'message' => $validator->errors(),
-                    'code' => 400,
+                    // 'code' => 400,
                     'success' => false,
                 ], 400);
             }
@@ -89,7 +89,7 @@ class AllocationController extends Controller
             return response()->json([
                 'data' => $data,
                 'message' => $this->messageCreate,
-                'code' => 200,
+                // 'code' => 200,
                 'success' => true,
             ], 200);
         } catch (\Exception $e) {
@@ -98,7 +98,7 @@ class AllocationController extends Controller
                 'message' => $this->messageFail,
                 'err' => $e->getTrace()[0],
                 'errMsg' => $e->getMessage(),
-                'code' => 500,
+                // 'code' => 500,
                 'success' => false,
             ], 500);
         }
@@ -116,7 +116,7 @@ class AllocationController extends Controller
                 return response()->json([
                     'message' => $this->messageMissing,
                     'success' => true,
-                    'code' => 401
+                    // 'code' => 401
                 ], 401);
             }
 
@@ -127,7 +127,7 @@ class AllocationController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'message' => $validator->errors(),
-                    'code' => 400,
+                    // 'code' => 400,
                     'success' => false
                 ], 400);
             }
@@ -146,7 +146,7 @@ class AllocationController extends Controller
             return response()->json([
                 'data' => $allocation,
                 'message' => $this->messageUpdate,
-                'code' => 200,
+                // 'code' => 200,
                 'success' => true
             ], 200);
 
@@ -156,7 +156,7 @@ class AllocationController extends Controller
                 'message' => $this->messageFail,
                 'err' => $e->getTrace()[0],
                 'errMsg' => $e->getMessage(),
-                'code' => 500,
+                // 'code' => 500,
                 'success' => false
             ], 500);
         }
