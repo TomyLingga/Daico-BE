@@ -25,7 +25,7 @@ class Category1 extends Model
     //     return $this->hasMany(Debe::class, 'id_category1');
     // }
 
-    public function cat_2()
+    public function cat2()
     {
         return $this->hasMany(Category2::class, 'id_category1');
     }

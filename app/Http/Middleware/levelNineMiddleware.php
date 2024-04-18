@@ -23,6 +23,7 @@ class levelNineMiddleware
 
         try {
             $decoded = JWT::decode($jwt, new Key(env('JWT_SECRET'), 'HS256'));
+            // dd($decoded);
             $appId = env('APP_ID');
             $urlAkses = env('BASE_URL_PORTAL')."akses/mine/{$appId}";
 
