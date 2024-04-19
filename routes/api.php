@@ -50,6 +50,10 @@ Route::group(['middleware' => 'levelnine.checker'], function () {
     //category3
     Route::get('category3/c2/{cat2}', [App\Http\Controllers\Api\Config\Category3Controller::class, 'indexCat2']);
     Route::get('category3/get/{id}', [App\Http\Controllers\Api\Config\Category3Controller::class, 'show']);
+    //DB
+    Route::get('debe', [App\Http\Controllers\Api\Debe\DebeController::class, 'index']);
+    Route::get('debe/get/{id}', [App\Http\Controllers\Api\Debe\DebeController::class, 'show']);
+    Route::post('debe/add', [App\Http\Controllers\Api\Debe\DebeController::class, 'store']);
 
 });
 

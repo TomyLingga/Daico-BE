@@ -24,4 +24,8 @@ class Plant extends Model
     {
         return $this->hasMany(Debe::class, 'id_plant');
     }
+    public function logs()
+    {
+        return $this->morphMany(Log::class, 'model');
+    }
 }

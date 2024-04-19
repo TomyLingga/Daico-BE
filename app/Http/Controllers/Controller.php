@@ -63,6 +63,7 @@ class Controller extends BaseController
 
     public function formatLogs($logs)
     {
+        // dd($logs);
         return $logs->map(function ($log) {
             $user = $this->getUserById($log->user_id);
             $oldData = json_decode($log->old_data, true);

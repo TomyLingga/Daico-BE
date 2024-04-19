@@ -24,4 +24,9 @@ class cCentre extends Model
     {
         return $this->hasMany(Debe::class, 'id_c_centre');
     }
+
+    public function logs()
+    {
+        return $this->morphMany(Log::class, 'model');
+    }
 }

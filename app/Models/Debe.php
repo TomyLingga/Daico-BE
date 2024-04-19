@@ -43,7 +43,10 @@ class Debe extends Model
     {
         return $this->belongsTo(Allocation::class, 'id_allocation');
     }
-
+    public function logs()
+    {
+        return $this->morphMany(Log::class, 'model');
+    }
     // public function fairValues()
     // {
     //     return $this->hasMany(FairValue::class, 'id_fixed_asset');

@@ -24,4 +24,8 @@ class mReport extends Model
     {
         return $this->hasMany(Debe::class, 'id_m_report');
     }
+    public function logs()
+    {
+        return $this->morphMany(Log::class, 'model');
+    }
 }
