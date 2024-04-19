@@ -44,6 +44,13 @@ Route::group(['middleware' => 'levelnine.checker'], function () {
     Route::get('category1/get/{id}', [App\Http\Controllers\Api\Config\Category1Controller::class, 'show']);
     Route::post('category/add', [App\Http\Controllers\Api\Config\Category1Controller::class, 'store']);
     Route::post('category/update/{id}', [App\Http\Controllers\Api\Config\Category1Controller::class, 'update']);
+    //category2
+    Route::get('category2/c1/{cat1}', [App\Http\Controllers\Api\Config\Category2Controller::class, 'indexCat1']);
+    Route::get('category2/get/{id}', [App\Http\Controllers\Api\Config\Category2Controller::class, 'show']);
+    //category3
+    Route::get('category3/c2/{cat2}', [App\Http\Controllers\Api\Config\Category3Controller::class, 'indexCat2']);
+    Route::get('category3/get/{id}', [App\Http\Controllers\Api\Config\Category3Controller::class, 'show']);
+
 });
 
 Route::fallback(function () {
