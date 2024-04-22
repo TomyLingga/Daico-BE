@@ -109,16 +109,6 @@ class AllocationController extends Controller
         DB::beginTransaction();
 
         try {
-            $allocation = Allocation::find($id);
-
-            if (!$allocation) {
-
-                return response()->json([
-                    'message' => $this->messageMissing,
-                    'success' => true,
-                    // 'code' => 401
-                ], 401);
-            }
 
             $validator = Validator::make($request->all(), [
                 'nama' => 'required',
@@ -130,6 +120,17 @@ class AllocationController extends Controller
                     // 'code' => 400,
                     'success' => false
                 ], 400);
+            }
+
+            $allocation = Allocation::find($id);
+
+            if (!$allocation) {
+
+                return response()->json([
+                    'message' => $this->messageMissing,
+                    'success' => true,
+                    // 'code' => 401
+                ], 401);
             }
 
             $dataToUpdate = [

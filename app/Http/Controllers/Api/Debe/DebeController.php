@@ -75,7 +75,7 @@ class DebeController extends Controller
 
         try {
             $rules = [
-                'coa' => 'required',
+                'coa' => 'required|unique:debe,coa',
                 'id_category3' => 'required|exists:' . Category3::class . ',id',
                 'id_m_report' => 'required|exists:' . MReport::class . ',id',
                 'id_c_centre' => 'required|exists:' . CCentre::class . ',id',
@@ -118,6 +118,61 @@ class DebeController extends Controller
                 'err' => $e->getTrace()[0],
                 'errMsg' => $e->getMessage(),
                 // 'code' => 500,
+                'success' => false,
+            ], 500);
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $rules = [
+                'coa' => 'required|unique:debe,coa,' . $id,
+                'id_category3' => 'required|exists:' . Category3::class . ',id',
+                'id_m_report' => 'required|exists:' . MReport::class . ',id',
+                'id_c_centre' => 'required|exists:' . CCentre::class . ',id',
+            ];
+
+            if ($request->has('id_plant')) {
+                $rules['id_plant'] = 'exists:' . Plant::class . ',id';
+            }
+
+            if ($request->has('id_allocation')) {
+                $rules['id_allocation'] = 'exists:' . Allocation::class . ',id';
+            }
+
+            $validator = Validator::make($request->all(), $rules);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => $validator->errors(),
+                    'success' => false,
+                ], 400);
+            }
+
+            $data = Debe::findOrFail($id);
+            $oldData = $data->toArray();
+
+            $data->update($request->all());
+
+            LoggerService::logAction($this->userData, $data, 'update', $oldData, $data->toArray());
+
+            DB::commit();
+
+            return response()->json([
+                'data' => $data,
+                'message' => $this->messageUpdate,
+                'success' => true,
+            ], 200);
+
+        } catch (\Throwable $e) {
+            DB::rollback();
+            return response()->json([
+                'message' => $this->messageFail,
+                'err' => $e->getTrace()[0],
+                'errMsg' => $e->getMessage(),
                 'success' => false,
             ], 500);
         }
