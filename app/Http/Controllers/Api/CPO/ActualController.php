@@ -67,9 +67,17 @@ class ActualController extends Controller
         try {
             $data = actualIncomingCpo::orderBy('tanggal')->get();
 
-            return $data->isEmpty()
-                ? response()->json(['message' => $this->messageMissing], 401)
-                : response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+            if ($data->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            // Calculate the value and add it to each item in the collection
+            $data->transform(function ($item) {
+                $item['value'] = $item->qty * $item->harga;
+                return $item;
+            });
+
+            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
         } catch (QueryException $e) {
             return response()->json([
                 'message' => $this->messageFail,
@@ -91,9 +99,17 @@ class ActualController extends Controller
                 ->orderBy('tanggal')
                 ->get();
 
-            return $data->isEmpty()
-                ? response()->json(['message' => $this->messageMissing], 401)
-                : response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+            if ($data->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            // Calculate the value and add it to each item in the collection
+            $data->transform(function ($item) {
+                $item['value'] = $item->qty * $item->harga;
+                return $item;
+            });
+
+            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
 
         } catch (QueryException $e) {
             return response()->json([
@@ -111,8 +127,11 @@ class ActualController extends Controller
         try {
             $data = actualIncomingCpo::findOrFail($id);
 
-            $data->history = $this->formatLogs($data->logs);
+            $data['value'] = $data->qty * $data->harga;
+
+            $data['history'] = $this->formatLogs($data->logs);
             unset($data->logs);
+
 
             return response()->json([
                 'data' => $data,
