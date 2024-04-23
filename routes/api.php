@@ -57,6 +57,28 @@ Route::group(['middleware' => 'levelnine.checker'], function () {
 
 });
 
+Route::group(['middleware' => 'levelfive.checker'], function () {
+    //Actual
+    Route::get('actual-cpo', [App\Http\Controllers\Api\CPO\ActualController::class, 'index']);
+    Route::get('actual-cpo/get/{id}', [App\Http\Controllers\Api\CPO\ActualController::class, 'show']);
+    Route::post('actual-cpo/add', [App\Http\Controllers\Api\CPO\ActualController::class, 'store']);
+    Route::post('actual-cpo/date', [App\Http\Controllers\Api\CPO\ActualController::class, 'indexDate']);
+    Route::post('actual-cpo/update/{id}', [App\Http\Controllers\Api\CPO\ActualController::class, 'update']);
+    //Outstanding
+    Route::get('outstanding-cpo', [App\Http\Controllers\Api\CPO\OutstandingController::class, 'index']);
+    Route::get('outstanding-cpo/get/{id}', [App\Http\Controllers\Api\CPO\OutstandingController::class, 'show']);
+    Route::post('outstanding-cpo/add', [App\Http\Controllers\Api\CPO\OutstandingController::class, 'store']);
+    Route::post('outstanding-cpo/update/{id}', [App\Http\Controllers\Api\CPO\OutstandingController::class, 'update']);
+    //KPBN
+    Route::get('cpo-kpbn', [App\Http\Controllers\Api\CPO\KpbnController::class, 'index']);
+    Route::get('cpo-kpbn/get/{id}', [App\Http\Controllers\Api\CPO\KpbnController::class, 'show']);
+    Route::post('cpo-kpbn/add', [App\Http\Controllers\Api\CPO\KpbnController::class, 'store']);
+    Route::post('cpo-kpbn/date', [App\Http\Controllers\Api\CPO\KpbnController::class, 'indexDate']);
+    Route::post('cpo-kpbn/update/{id}', [App\Http\Controllers\Api\CPO\KpbnController::class, 'update']);
+
+});
+
+
 Route::fallback(function () {
     return response()->json(['code' => 404, 'message' => 'URL not Found'], 404);
 });
