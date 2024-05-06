@@ -54,6 +54,7 @@ Route::group(['middleware' => 'levelnine.checker'], function () {
     Route::get('debe', [App\Http\Controllers\Api\Debe\DebeController::class, 'index']);
     Route::get('debe/get/{id}', [App\Http\Controllers\Api\Debe\DebeController::class, 'show']);
     Route::post('debe/add', [App\Http\Controllers\Api\Debe\DebeController::class, 'store']);
+    Route::post('debe/update/{id}', [App\Http\Controllers\Api\Debe\DebeController::class, 'update']);
 
 });
 
