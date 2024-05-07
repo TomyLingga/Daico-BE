@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Http\Controllers\Api\CPO;
+namespace App\Http\Controllers\Api\ProCost;
 
 use App\Http\Controllers\Controller;
-use App\Models\actualIncomingCpo;
+use App\Models\MarketRoutersBulky;
+use App\Models\MasterBulky;
 use App\Services\LoggerService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-
-class ActualController extends Controller
+class MarketRoutersController extends Controller
 {
     private $messageFail = 'Something went wrong';
     private $messageMissing = 'Data not found in record';
@@ -25,9 +25,10 @@ class ActualController extends Controller
 
         try {
             $validator = Validator::make($request->all(), [
-                'tanggal' => 'required|date|unique:actual_in_cpo,tanggal',
-                'qty' => 'required|numeric',
-                'harga' => 'required|numeric',
+                'id_bulky' => 'required|integer',
+                'tanggal' => 'required|date|unique:market_routers_bulky,tanggal',
+                'currency_id' => 'required|integer',
+                'nilai' => 'required|numeric',
             ]);
 
             if ($validator->fails()) {
@@ -37,8 +38,9 @@ class ActualController extends Controller
                     'success' => false,
                 ], 400);
             }
+            MasterBulky::findOrFail($request->id_bulky);
 
-            $data = actualIncomingCpo::create($request->all());
+            $data = MarketRoutersBulky::create($request->all());
 
             LoggerService::logAction($this->userData, $data, 'create', null, $data->toArray());
 
@@ -65,16 +67,11 @@ class ActualController extends Controller
     public function index()
     {
         try {
-            $data = actualIncomingCpo::orderBy('tanggal')->get();
+            $data = MarketRoutersBulky::orderBy('tanggal')->get();
 
             if ($data->isEmpty()) {
                 return response()->json(['message' => $this->messageMissing], 401);
             }
-
-            $data->transform(function ($item) {
-                $item['value'] = $item->qty * $item->harga;
-                return $item;
-            });
 
             return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
         } catch (QueryException $e) {
@@ -93,7 +90,7 @@ class ActualController extends Controller
         try {
             $tanggal = $request->tanggal;
 
-            $data = actualIncomingCpo::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
+            $data = MarketRoutersBulky::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
                 ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
                 ->orderBy('tanggal')
                 ->get();
@@ -101,11 +98,6 @@ class ActualController extends Controller
             if ($data->isEmpty()) {
                 return response()->json(['message' => $this->messageMissing], 401);
             }
-
-            $data->transform(function ($item) {
-                $item['value'] = $item->qty * $item->harga;
-                return $item;
-            });
 
             return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
 
@@ -123,9 +115,7 @@ class ActualController extends Controller
     public function show($id)
     {
         try {
-            $data = actualIncomingCpo::findOrFail($id);
-
-            $data['value'] = $data->qty * $data->harga;
+            $data = MarketRoutersBulky::findOrFail($id);
 
             $data['history'] = $this->formatLogs($data->logs);
             unset($data->logs);
@@ -154,9 +144,10 @@ class ActualController extends Controller
         try {
 
             $rules = [
-                'tanggal' => 'required|date|unique:actual_in_cpo,tanggal,' . $id,
-                'qty' => 'required|numeric',
-                'harga' => 'required|numeric',
+                'id_bulky' => 'required|integer',
+                'tanggal' => 'required|date|unique:market_routers_bulky,tanggal,' . $id,
+                'currency_id' => 'required|integer',
+                'nilai' => 'required|numeric',
             ];
 
             $validator = Validator::make($request->all(), $rules);
@@ -167,8 +158,8 @@ class ActualController extends Controller
                     'success' => false
                 ], 400);
             }
-
-            $data = actualIncomingCpo::findOrFail($id);
+            MasterBulky::findOrFail($request->id_bulky);
+            $data = MarketRoutersBulky::findOrFail($id);
             $oldData = $data->toArray();
 
             $data->update($request->all());

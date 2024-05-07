@@ -29,4 +29,9 @@ class MasterBulky extends Model
     {
         return $this->hasMany(LevyDutyBulky::class, 'id_bulky');
     }
+
+    public function logs()
+    {
+        return $this->morphMany(Log::class, 'model');
+    }
 }
