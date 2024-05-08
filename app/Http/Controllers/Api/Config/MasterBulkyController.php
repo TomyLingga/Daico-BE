@@ -68,7 +68,7 @@ class MasterBulkyController extends Controller
 
         try {
             $validator = Validator::make($request->all(), [
-                'nama' => 'required',
+                'name' => 'required',
             ]);
 
             if ($validator->fails()) {
@@ -110,7 +110,7 @@ class MasterBulkyController extends Controller
         try {
 
             $validator = Validator::make($request->all(), [
-                'nama' => 'required',
+                'name' => 'required',
             ]);
 
             if ($validator->fails()) {
@@ -133,7 +133,7 @@ class MasterBulkyController extends Controller
             }
 
             $dataToUpdate = [
-                'nama' => $request->filled('nama') ? $request->nama : $mBulky->nama,
+                'name' => $request->filled('name') ? $request->name : $mBulky->name,
             ];
 
             $oldData = $mBulky->toArray();

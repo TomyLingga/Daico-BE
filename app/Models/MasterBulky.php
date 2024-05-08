@@ -15,7 +15,7 @@ class MasterBulky extends Model
     protected $table = 'master_bulky';
 
     protected $fillable = [
-        'nama'
+        'name'
     ];
 
     protected $hidden = ['created_at', 'updated_at'];
