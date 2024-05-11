@@ -31,7 +31,7 @@ class DebeController extends Controller
 
             return $debe->isEmpty()
                 ? response()->json(['message' => $this->messageMissing], 401)
-                : response()->json(['allocation' => $debe, 'message' => $this->messageAll], 200);
+                : response()->json(['data' => $debe, 'message' => $this->messageAll], 200);
         } catch (QueryException $e) {
             return response()->json([
                 'message' => $this->messageFail,

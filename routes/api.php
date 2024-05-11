@@ -14,8 +14,56 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+//allocation
+Route::get('allocation', [App\Http\Controllers\Api\Config\AllocationController::class, 'index']);
+Route::get('allocation/get/{id}', [App\Http\Controllers\Api\Config\AllocationController::class, 'show']);
+//cCenter
+Route::get('cCenter', [App\Http\Controllers\Api\Config\cCentreController::class, 'index']);
+Route::get('cCenter/get/{id}', [App\Http\Controllers\Api\Config\cCentreController::class, 'show']);
+//mReport
+Route::get('mReport', [App\Http\Controllers\Api\Config\mReportController::class, 'index']);
+Route::get('mReport/get/{id}', [App\Http\Controllers\Api\Config\mReportController::class, 'show']);
+//plant
+Route::get('plant', [App\Http\Controllers\Api\Config\PlantController::class, 'index']);
+Route::get('plant/get/{id}', [App\Http\Controllers\Api\Config\PlantController::class, 'show']);
+//category1
+Route::get('category1', [App\Http\Controllers\Api\Config\Category1Controller::class, 'index']);
+Route::get('category1/get/{id}', [App\Http\Controllers\Api\Config\Category1Controller::class, 'show']);
+//category2
+Route::get('category2/c1/{cat1}', [App\Http\Controllers\Api\Config\Category2Controller::class, 'indexCat1']);
+Route::get('category2/get/{id}', [App\Http\Controllers\Api\Config\Category2Controller::class, 'show']);
+//category3
+Route::get('category3/c2/{cat2}', [App\Http\Controllers\Api\Config\Category3Controller::class, 'indexCat2']);
+Route::get('category3/get/{id}', [App\Http\Controllers\Api\Config\Category3Controller::class, 'show']);
+//DB
+Route::get('debe', [App\Http\Controllers\Api\Debe\DebeController::class, 'index']);
+Route::get('debe/get/{id}', [App\Http\Controllers\Api\Debe\DebeController::class, 'show']);
+//Actual CPO
+Route::get('actual-cpo', [App\Http\Controllers\Api\CPO\ActualController::class, 'index']);
+Route::get('actual-cpo/get/{id}', [App\Http\Controllers\Api\CPO\ActualController::class, 'show']);
+Route::post('actual-cpo/date', [App\Http\Controllers\Api\CPO\ActualController::class, 'indexDate']);
+//Outstanding CPO
+Route::get('outstanding-cpo', [App\Http\Controllers\Api\CPO\OutstandingController::class, 'index']);
+Route::get('outstanding-cpo/get/{id}', [App\Http\Controllers\Api\CPO\OutstandingController::class, 'show']);
+//CPO KPBN
+Route::get('cpo-kpbn', [App\Http\Controllers\Api\CPO\KpbnController::class, 'index']);
+Route::get('cpo-kpbn/get/{id}', [App\Http\Controllers\Api\CPO\KpbnController::class, 'show']);
+Route::post('cpo-kpbn/date', [App\Http\Controllers\Api\CPO\KpbnController::class, 'indexDate']);
+//Master Bulky
+Route::get('bulky', [App\Http\Controllers\Api\Config\MasterBulkyController::class, 'index']);
+Route::get('bulky/get/{id}', [App\Http\Controllers\Api\Config\MasterBulkyController::class, 'show']);
+//LevyDuty
+Route::get('levy-duty', [App\Http\Controllers\Api\ProCost\LevyDutyController::class, 'index']);
+Route::get('levy-duty/get/{id}', [App\Http\Controllers\Api\ProCost\LevyDutyController::class, 'show']);
+Route::post('levy-duty/date', [App\Http\Controllers\Api\ProCost\LevyDutyController::class, 'indexDate']);
+//MarketRouter
+Route::get('market-router', [App\Http\Controllers\Api\ProCost\MarketRoutersController::class, 'index']);
+Route::get('market-router/get/{id}', [App\Http\Controllers\Api\ProCost\MarketRoutersController::class, 'show']);
+Route::post('market-router/date', [App\Http\Controllers\Api\ProCost\MarketRoutersController::class, 'indexDate']);
+
+Route::group(['middleware' => 'levelone.checker'], function () {
+    //General Ledger
+    Route::post('general-ledger/date', [App\Http\Controllers\Api\GL\GeneralLedgerController::class, 'index_period']);
 });
 
 Route::group(['middleware' => 'levelnine.checker'], function () {
@@ -66,55 +114,9 @@ Route::group(['middleware' => 'levelfive.checker'], function () {
     Route::post('cpo-kpbn/update/{id}', [App\Http\Controllers\Api\CPO\KpbnController::class, 'update']);
 });
 
-Route::group(['middleware' => 'levelone.checker'], function () {
-    //allocation
-    Route::get('allocation', [App\Http\Controllers\Api\Config\AllocationController::class, 'index']);
-    Route::get('allocation/get/{id}', [App\Http\Controllers\Api\Config\AllocationController::class, 'show']);
-    //cCenter
-    Route::get('cCenter', [App\Http\Controllers\Api\Config\cCentreController::class, 'index']);
-    Route::get('cCenter/get/{id}', [App\Http\Controllers\Api\Config\cCentreController::class, 'show']);
-    //mReport
-    Route::get('mReport', [App\Http\Controllers\Api\Config\mReportController::class, 'index']);
-    Route::get('mReport/get/{id}', [App\Http\Controllers\Api\Config\mReportController::class, 'show']);
-    //plant
-    Route::get('plant', [App\Http\Controllers\Api\Config\PlantController::class, 'index']);
-    Route::get('plant/get/{id}', [App\Http\Controllers\Api\Config\PlantController::class, 'show']);
-    //category1
-    Route::get('category1', [App\Http\Controllers\Api\Config\Category1Controller::class, 'index']);
-    Route::get('category1/get/{id}', [App\Http\Controllers\Api\Config\Category1Controller::class, 'show']);
-    //category2
-    Route::get('category2/c1/{cat1}', [App\Http\Controllers\Api\Config\Category2Controller::class, 'indexCat1']);
-    Route::get('category2/get/{id}', [App\Http\Controllers\Api\Config\Category2Controller::class, 'show']);
-    //category3
-    Route::get('category3/c2/{cat2}', [App\Http\Controllers\Api\Config\Category3Controller::class, 'indexCat2']);
-    Route::get('category3/get/{id}', [App\Http\Controllers\Api\Config\Category3Controller::class, 'show']);
-    //DB
-    Route::get('debe', [App\Http\Controllers\Api\Debe\DebeController::class, 'index']);
-    Route::get('debe/get/{id}', [App\Http\Controllers\Api\Debe\DebeController::class, 'show']);
-    //Actual CPO
-    Route::get('actual-cpo', [App\Http\Controllers\Api\CPO\ActualController::class, 'index']);
-    Route::get('actual-cpo/get/{id}', [App\Http\Controllers\Api\CPO\ActualController::class, 'show']);
-    Route::post('actual-cpo/date', [App\Http\Controllers\Api\CPO\ActualController::class, 'indexDate']);
-    //Outstanding CPO
-    Route::get('outstanding-cpo', [App\Http\Controllers\Api\CPO\OutstandingController::class, 'index']);
-    Route::get('outstanding-cpo/get/{id}', [App\Http\Controllers\Api\CPO\OutstandingController::class, 'show']);
-    //CPO KPBN
-    Route::get('cpo-kpbn', [App\Http\Controllers\Api\CPO\KpbnController::class, 'index']);
-    Route::get('cpo-kpbn/get/{id}', [App\Http\Controllers\Api\CPO\KpbnController::class, 'show']);
-    Route::post('cpo-kpbn/date', [App\Http\Controllers\Api\CPO\KpbnController::class, 'indexDate']);
-    //Master Bulky
-    Route::get('bulky', [App\Http\Controllers\Api\Config\MasterBulkyController::class, 'index']);
-    Route::get('bulky/get/{id}', [App\Http\Controllers\Api\Config\MasterBulkyController::class, 'show']);
-    //LevyDuty
-    Route::get('levy-duty', [App\Http\Controllers\Api\ProCost\LevyDutyController::class, 'index']);
-    Route::get('levy-duty/get/{id}', [App\Http\Controllers\Api\ProCost\LevyDutyController::class, 'show']);
-    Route::post('levy-duty/date', [App\Http\Controllers\Api\ProCost\LevyDutyController::class, 'indexDate']);
-    //MarketRouter
-    Route::get('market-router', [App\Http\Controllers\Api\ProCost\MarketRoutersController::class, 'index']);
-    Route::get('market-router/get/{id}', [App\Http\Controllers\Api\ProCost\MarketRoutersController::class, 'show']);
-    Route::post('market-router/date', [App\Http\Controllers\Api\ProCost\MarketRoutersController::class, 'indexDate']);
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
 });
-
 
 Route::fallback(function () {
     return response()->json(['code' => 404, 'message' => 'URL not Found'], 404);

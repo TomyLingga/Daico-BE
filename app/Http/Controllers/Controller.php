@@ -19,6 +19,7 @@ class Controller extends BaseController
     public $urlAllDept;
     public $urlUser;
     public $urlAllUser;
+    public $urlGeneralLedger;
 
     public function __construct()
     {
@@ -29,8 +30,18 @@ class Controller extends BaseController
             $this->urlAllDept = env('BASE_URL_PORTAL')."department";
             $this->urlUser = env('BASE_URL_PORTAL')."user/get/";
             $this->urlAllUser = env('BASE_URL_PORTAL')."user";
+            $this->urlGeneralLedger = env('BASE_URL_ODOO')."account_move_line/index";
             return $next($request);
         });
+    }
+
+    public function getGeneralLedgerData($tanggal)
+    {
+        return Http::withHeaders([
+            'Authorization' => $this->token,
+        ])->post($this->urlGeneralLedger, [
+            'tanggal' => $tanggal
+        ])->json()['data'] ?? [];
     }
 
     public function getDepartmentData()
