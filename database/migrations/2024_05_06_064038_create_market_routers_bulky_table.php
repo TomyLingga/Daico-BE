@@ -16,7 +16,7 @@ class CreateMarketRoutersBulkyTable extends Migration
         Schema::create('market_routers_bulky', function (Blueprint $table) {
             $table->id();
             $table->foreignId('id_bulky')->constrained('master_bulky');
-            $table->date('tanggal')->unique();
+            $table->date('tanggal');
             $table->decimal('nilai', 30, 2);
             $table->integer('currency_id');
             $table->timestamps();

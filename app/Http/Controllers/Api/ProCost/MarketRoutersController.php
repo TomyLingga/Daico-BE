@@ -10,6 +10,8 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+
 class MarketRoutersController extends Controller
 {
     private $messageFail = 'Something went wrong';
@@ -26,7 +28,13 @@ class MarketRoutersController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'id_bulky' => 'required|integer',
-                'tanggal' => 'required|date|unique:market_routers_bulky,tanggal',
+                'tanggal' => [
+                    'required',
+                    'date',
+                    Rule::unique('market_routers_bulky')->where(function ($query) use ($request) {
+                        return $query->where('id_bulky', $request->id_bulky);
+                    }),
+                ],
                 'currency_id' => 'required|integer',
                 'nilai' => 'required|numeric',
             ]);
@@ -145,7 +153,13 @@ class MarketRoutersController extends Controller
 
             $rules = [
                 'id_bulky' => 'required|integer',
-                'tanggal' => 'required|date|unique:market_routers_bulky,tanggal,' . $id,
+                'tanggal' => [
+                    'required',
+                    'date',
+                    Rule::unique('market_routers_bulky')->where(function ($query) use ($request) {
+                        return $query->where('id_bulky', $request->id_bulky);
+                    })->ignore($id),
+                ],
                 'currency_id' => 'required|integer',
                 'nilai' => 'required|numeric',
             ];

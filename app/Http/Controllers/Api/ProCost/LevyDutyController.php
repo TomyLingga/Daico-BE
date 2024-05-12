@@ -10,6 +10,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class LevyDutyController extends Controller
 {
@@ -27,7 +28,13 @@ class LevyDutyController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'id_bulky' => 'required|integer',
-                'tanggal' => 'required|date|unique:levy_duty_bulky,tanggal',
+                'tanggal' => [
+                    'required',
+                    'date',
+                    Rule::unique('levy_duty_bulky')->where(function ($query) use ($request) {
+                        return $query->where('id_bulky', $request->id_bulky);
+                    }),
+                ],
                 'currency_id' => 'required|integer',
                 'nilai' => 'required|numeric',
             ]);
@@ -146,7 +153,13 @@ class LevyDutyController extends Controller
 
             $rules = [
                 'id_bulky' => 'required|integer',
-                'tanggal' => 'required|date|unique:levy_duty_bulky,tanggal,' . $id,
+                'tanggal' => [
+                    'required',
+                    'date',
+                    Rule::unique('levy_duty_bulky')->where(function ($query) use ($request) {
+                        return $query->where('id_bulky', $request->id_bulky);
+                    })->ignore($id),
+                ],
                 'currency_id' => 'required|integer',
                 'nilai' => 'required|numeric',
             ];
