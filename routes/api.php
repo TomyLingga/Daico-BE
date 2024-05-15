@@ -52,6 +52,9 @@ Route::post('cpo-kpbn/date', [App\Http\Controllers\Api\CPO\KpbnController::class
 //Master Bulky
 Route::get('bulky', [App\Http\Controllers\Api\Config\MasterBulkyController::class, 'index']);
 Route::get('bulky/get/{id}', [App\Http\Controllers\Api\Config\MasterBulkyController::class, 'show']);
+//Master Bulky Produksi
+Route::get('bulky-prod', [App\Http\Controllers\Api\Config\MasterBulkProduksiController::class, 'index']);
+Route::get('bulky-prod/get/{id}', [App\Http\Controllers\Api\Config\MasterBulkProduksiController::class, 'show']);
 //LevyDuty
 Route::get('levy-duty', [App\Http\Controllers\Api\ProCost\LevyDutyController::class, 'index']);
 Route::get('levy-duty/get/{id}', [App\Http\Controllers\Api\ProCost\LevyDutyController::class, 'show']);
@@ -60,6 +63,10 @@ Route::post('levy-duty/date', [App\Http\Controllers\Api\ProCost\LevyDutyControll
 Route::get('market-router', [App\Http\Controllers\Api\ProCost\MarketRoutersController::class, 'index']);
 Route::get('market-router/get/{id}', [App\Http\Controllers\Api\ProCost\MarketRoutersController::class, 'show']);
 Route::post('market-router/date', [App\Http\Controllers\Api\ProCost\MarketRoutersController::class, 'indexDate']);
+//Setting
+Route::get('settings', [App\Http\Controllers\Api\Config\SettingController::class, 'index']);
+Route::get('settings/id/{id}', [App\Http\Controllers\Api\Config\SettingController::class, 'show']);
+Route::get('settings/name/{name}', [App\Http\Controllers\Api\Config\MasterBulkProduksiController::class, 'showName']);
 
 Route::group(['middleware' => 'levelone.checker'], function () {
     //General Ledger
@@ -88,6 +95,13 @@ Route::group(['middleware' => 'levelnine.checker'], function () {
     //master Bulky
     Route::post('bulky/add', [App\Http\Controllers\Api\Config\MasterBulkyController::class, 'store']);
     Route::post('bulky/update/{id}', [App\Http\Controllers\Api\Config\MasterBulkyController::class, 'update']);
+    //master Bulky Produksi
+    Route::post('bulky-prod/add', [App\Http\Controllers\Api\Config\MasterBulkProduksiController::class, 'store']);
+    Route::post('bulky-prod/update/{id}', [App\Http\Controllers\Api\Config\MasterBulkProduksiController::class, 'update']);
+    //setting
+    Route::post('settings/add', [App\Http\Controllers\Api\Config\SettingController::class, 'store']);
+    Route::post('settings/update/{id}', [App\Http\Controllers\Api\Config\SettingController::class, 'update']);
+
 });
 
 Route::group(['middleware' => 'levelsix.checker'], function () {
