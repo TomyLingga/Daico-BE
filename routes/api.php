@@ -66,11 +66,13 @@ Route::post('market-router/date', [App\Http\Controllers\Api\ProCost\MarketRouter
 //Setting
 Route::get('settings', [App\Http\Controllers\Api\Config\SettingController::class, 'index']);
 Route::get('settings/id/{id}', [App\Http\Controllers\Api\Config\SettingController::class, 'show']);
-Route::get('settings/name/{name}', [App\Http\Controllers\Api\Config\MasterBulkProduksiController::class, 'showName']);
+Route::get('settings/name/{name}', [App\Http\Controllers\Api\Config\SettingController::class, 'showName']);
 
 Route::group(['middleware' => 'levelone.checker'], function () {
     //General Ledger
     Route::post('general-ledger/date', [App\Http\Controllers\Api\GL\GeneralLedgerController::class, 'index_period']);
+    //Cost Prod
+    Route::post('cost-prod/get', [App\Http\Controllers\Api\CostProd\CostProdController::class, 'index_period']);
 });
 
 Route::group(['middleware' => 'levelnine.checker'], function () {

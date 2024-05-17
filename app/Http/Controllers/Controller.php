@@ -20,6 +20,7 @@ class Controller extends BaseController
     public $urlUser;
     public $urlAllUser;
     public $urlGeneralLedger;
+    public $urlGeneralLedgerCoa;
 
     public function __construct()
     {
@@ -31,6 +32,7 @@ class Controller extends BaseController
             $this->urlUser = env('BASE_URL_PORTAL')."user/get/";
             $this->urlAllUser = env('BASE_URL_PORTAL')."user";
             $this->urlGeneralLedger = env('BASE_URL_ODOO')."account_move_line/index";
+            $this->urlGeneralLedgerCoa = env('BASE_URL_ODOO')."account_move_line/coa";
             return $next($request);
         });
     }
@@ -42,6 +44,18 @@ class Controller extends BaseController
         ])->post($this->urlGeneralLedger, [
             'tanggal' => $tanggal
         ])->json()['data'] ?? [];
+    }
+
+    public function getGeneralLedgerDataWithCoa($tanggal, $coa)
+    {
+        $response = Http::withHeaders([
+            'Authorization' => $this->token,
+        ])->post($this->urlGeneralLedgerCoa, [
+            'tanggal' => $tanggal,
+            'coa' => $coa
+        ])->json();
+
+        return $response['data'] ?? [];
     }
 
     public function getDepartmentData()

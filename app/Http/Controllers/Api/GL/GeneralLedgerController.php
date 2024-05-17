@@ -57,5 +57,4 @@ class GeneralLedgerController extends Controller
             'success' => true,
         ], 200);
     }
-
 }
