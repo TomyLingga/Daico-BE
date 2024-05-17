@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\ProCost;
 use App\Http\Controllers\Controller;
 use App\Models\LevyDutyBulky;
 use App\Models\MasterBulky;
+use App\Models\Setting;
 use App\Services\LoggerService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -81,7 +82,9 @@ class LevyDutyController extends Controller
                 return response()->json(['message' => $this->messageMissing], 401);
             }
 
-            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+            $setting = Setting::where('setting_name', 'pembagi_market_idr')->first();
+
+            return response()->json(['data' => $data, 'pembagi_market_idr' => $setting,'message' => $this->messageAll], 200);
         } catch (QueryException $e) {
             return response()->json([
                 'message' => $this->messageFail,
@@ -106,8 +109,9 @@ class LevyDutyController extends Controller
             if ($data->isEmpty()) {
                 return response()->json(['message' => $this->messageMissing], 401);
             }
+            $setting = Setting::where('setting_name', 'pembagi_market_idr')->first();
 
-            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+            return response()->json(['data' => $data, 'pembagi_market_idr' => $setting, 'message' => $this->messageAll], 200);
 
         } catch (QueryException $e) {
             return response()->json([
