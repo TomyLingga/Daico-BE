@@ -82,6 +82,14 @@ Route::get('uraian-produksi/kategori/{id}', [App\Http\Controllers\Api\Config\Ura
 //Laporan Produksi
 Route::post('laporan-produksi/date', [App\Http\Controllers\Api\DetAlloc\LaporanProduksiController::class, 'indexDate']);
 Route::get('laporan-produksi/get/{id}', [App\Http\Controllers\Api\DetAlloc\LaporanProduksiController::class, 'show']);
+//Daily DMO
+Route::get('daily-dmo', [App\Http\Controllers\Api\Target\DailyDmoController::class, 'index']);
+Route::get('daily-dmo/get/{id}', [App\Http\Controllers\Api\Target\DailyDmoController::class, 'show']);
+Route::post('daily-dmo/date', [App\Http\Controllers\Api\Target\DailyDmoController::class, 'indexDate']);
+//Daily DMO
+Route::get('monthly-dmo', [App\Http\Controllers\Api\Target\MonthlyDmoController::class, 'index']);
+Route::get('monthly-dmo/get/{id}', [App\Http\Controllers\Api\Target\MonthlyDmoController::class, 'show']);
+Route::post('monthly-dmo/date', [App\Http\Controllers\Api\Target\MonthlyDmoController::class, 'indexDate']);
 
 Route::group(['middleware' => 'levelone.checker'], function () {
     //Kategori Uraian Produksi
@@ -90,6 +98,12 @@ Route::group(['middleware' => 'levelone.checker'], function () {
     //Laporan Produksi
     Route::post('laporan-produksi/add', [App\Http\Controllers\Api\DetAlloc\LaporanProduksiController::class, 'store']);
     Route::post('laporan-produksi/update/{id}', [App\Http\Controllers\Api\DetAlloc\LaporanProduksiController::class, 'update']);
+    //Daily DMO
+    Route::post('daily-dmo/add', [App\Http\Controllers\Api\Target\DailyDmoController::class, 'store']);
+    Route::post('daily-dmo/update/{id}', [App\Http\Controllers\Api\Target\DailyDmoController::class, 'update']);
+    //Monthly DMO
+    Route::post('monthly-dmo/add', [App\Http\Controllers\Api\Target\MonthlyDmoController::class, 'store']);
+    Route::post('monthly-dmo/update/{id}', [App\Http\Controllers\Api\Target\MonthlyDmoController::class, 'update']);
 });
 
 Route::group(['middleware' => 'levelnine.checker'], function () {

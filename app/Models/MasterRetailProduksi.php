@@ -6,13 +6,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 
-class MasterBulkProduksi extends Model
+class MasterRetailProduksi extends Model
 {
     use HasFactory, Notifiable;
 
     protected $primaryKey = 'id';
 
-    protected $table = 'master_bulk_produksi';
+    protected $table = 'master_retail_produksi';
 
     protected $fillable = [
         'name'

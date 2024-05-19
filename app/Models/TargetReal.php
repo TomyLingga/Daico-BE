@@ -6,28 +6,24 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 
-class MasterBulkProduksi extends Model
+class TargetReal extends Model
 {
     use HasFactory, Notifiable;
 
     protected $primaryKey = 'id';
 
-    protected $table = 'master_bulk_produksi';
+    protected $table = 'target_real';
 
     protected $fillable = [
-        'name'
+        'productable_id',
+        'productable_type',
+        'tanggal',
+        'value',
     ];
 
-    protected $hidden = ['created_at', 'updated_at'];
-
-    public function targetReal()
+    public function productable()
     {
-        return $this->morphOne(TargetReal::class, 'productable');
-    }
-
-    public function targetRkap()
-    {
-        return $this->morphOne(TargetRKAP::class, 'productable');
+        return $this->morphTo();
     }
 
     public function logs()

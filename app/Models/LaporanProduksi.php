@@ -21,8 +21,6 @@ class LaporanProduksi extends Model
         'value',
     ];
 
-    protected $hidden = ['created_at', 'updated_at'];
-
     public function uraian()
     {
         return $this->belongsTo(UraianProduksi::class, 'id_uraian');
