@@ -43,8 +43,8 @@ class MasterBulkProduksiController extends Controller
         try {
             $mBulky = MasterBulkProduksi::findOrFail($id);
 
-            $mBulky->history = $this->formatLogs($mBulky->logs);
-            unset($mBulky->logs);
+            // $mBulky->history = $this->formatLogs($mBulky->logs);
+            // unset($mBulky->logs);
 
             return response()->json([
                 'mBulky' => $mBulky,

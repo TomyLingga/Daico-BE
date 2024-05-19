@@ -27,7 +27,7 @@ class DebeController extends Controller
     public function index()
     {
         try {
-            $debe = Debe::with('cat3', 'mReport', 'cCentre', 'plant', 'allocation')->get();
+            $debe = Debe::with(['cat3.cat2.cat1', 'mReport', 'cCentre', 'plant', 'allocation'])->get();
 
             return $debe->isEmpty()
                 ? response()->json(['message' => $this->messageMissing], 401)
@@ -46,10 +46,10 @@ class DebeController extends Controller
     public function show($id)
     {
         try {
-            $debe = Debe::with('cat3', 'mReport', 'cCentre', 'plant', 'allocation', 'logs')->findOrFail($id);
+            $debe = Debe::with(['cat3.cat2.cat1', 'mReport', 'cCentre', 'plant', 'allocation'])->findOrFail($id);
 
-            $debe->history = $this->formatLogs($debe->logs);
-            unset($debe->logs);
+            // $debe->history = $this->formatLogs($debe->logs);
+            // unset($debe->logs);
 
             return response()->json([
                 'debe' => $debe,

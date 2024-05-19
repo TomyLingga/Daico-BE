@@ -31,6 +31,11 @@ class Category3 extends Model
         return $this->belongsTo(Category2::class, 'id_category2');
     }
 
+    public function cat1()
+    {
+        return $this->hasOneThrough(Category1::class, Category2::class, 'id_category2', 'id', 'id_category2', 'id_category1');
+    }
+
     public function logs()
     {
         return $this->morphMany(Log::class, 'model');

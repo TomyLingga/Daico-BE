@@ -43,8 +43,8 @@ class MasterBulkyController extends Controller
         try {
             $mBulky = MasterBulky::findOrFail($id);
 
-            $mBulky->history = $this->formatLogs($mBulky->logs);
-            unset($mBulky->logs);
+            // $mBulky->history = $this->formatLogs($mBulky->logs);
+            // unset($mBulky->logs);
 
             return response()->json([
                 'mBulky' => $mBulky,

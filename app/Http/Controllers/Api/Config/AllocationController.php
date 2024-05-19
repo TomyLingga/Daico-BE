@@ -44,8 +44,8 @@ class AllocationController extends Controller
         try {
             $allocation = Allocation::findOrFail($id);
 
-            $allocation->history = $this->formatLogs($allocation->logs);
-            unset($allocation->logs);
+            // $allocation->history = $this->formatLogs($allocation->logs);
+            // unset($allocation->logs);
 
             return response()->json([
                 'allocation' => $allocation,

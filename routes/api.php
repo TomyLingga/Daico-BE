@@ -67,12 +67,29 @@ Route::post('market-router/date', [App\Http\Controllers\Api\ProCost\MarketRouter
 Route::get('settings', [App\Http\Controllers\Api\Config\SettingController::class, 'index']);
 Route::get('settings/id/{id}', [App\Http\Controllers\Api\Config\SettingController::class, 'show']);
 Route::get('settings/name/{name}', [App\Http\Controllers\Api\Config\SettingController::class, 'showName']);
+//General Ledger
+Route::post('general-ledger/date', [App\Http\Controllers\Api\GL\GeneralLedgerController::class, 'index_period']);
+//Cost Prod
+Route::post('cost-prod/get', [App\Http\Controllers\Api\CostProd\CostProdController::class, 'index_period']);
+//Kategori Uraian Produksi
+Route::get('kategori-produksi', [App\Http\Controllers\Api\Config\KategoriUraianProduksiController::class, 'index']);
+Route::get('kategori-produksi/get/{id}', [App\Http\Controllers\Api\Config\KategoriUraianProduksiController::class, 'show']);
+
+//Uraian
+Route::get('uraian-produksi', [App\Http\Controllers\Api\Config\UraianProduksiController::class, 'index']);
+Route::get('uraian-produksi/get/{id}', [App\Http\Controllers\Api\Config\UraianProduksiController::class, 'show']);
+Route::get('uraian-produksi/kategori/{id}', [App\Http\Controllers\Api\Config\UraianProduksiController::class, 'indexGrup']);
+//Laporan Produksi
+Route::post('laporan-produksi/date', [App\Http\Controllers\Api\DetAlloc\LaporanProduksiController::class, 'indexDate']);
+Route::get('laporan-produksi/get/{id}', [App\Http\Controllers\Api\DetAlloc\LaporanProduksiController::class, 'show']);
 
 Route::group(['middleware' => 'levelone.checker'], function () {
-    //General Ledger
-    Route::post('general-ledger/date', [App\Http\Controllers\Api\GL\GeneralLedgerController::class, 'index_period']);
-    //Cost Prod
-    Route::post('cost-prod/get', [App\Http\Controllers\Api\CostProd\CostProdController::class, 'index_period']);
+    //Kategori Uraian Produksi
+    Route::post('kategori-produksi/add', [App\Http\Controllers\Api\Config\KategoriUraianProduksiController::class, 'store']);
+    Route::post('kategori-produksi/update/{id}', [App\Http\Controllers\Api\Config\KategoriUraianProduksiController::class, 'update']);
+    //Laporan Produksi
+    Route::post('laporan-produksi/add', [App\Http\Controllers\Api\DetAlloc\LaporanProduksiController::class, 'store']);
+    Route::post('laporan-produksi/update/{id}', [App\Http\Controllers\Api\DetAlloc\LaporanProduksiController::class, 'update']);
 });
 
 Route::group(['middleware' => 'levelnine.checker'], function () {
@@ -106,16 +123,16 @@ Route::group(['middleware' => 'levelnine.checker'], function () {
 
 });
 
-Route::group(['middleware' => 'levelsix.checker'], function () {
-    //MarketRouters
-    Route::post('market-router/add', [App\Http\Controllers\Api\ProCost\MarketRoutersController::class, 'store']);
-    Route::post('market-router/update/{id}', [App\Http\Controllers\Api\ProCost\MarketRoutersController::class, 'update']);
-});
-
 Route::group(['middleware' => 'levelseven.checker'], function () {
     //LevyDuty
     Route::post('levy-duty/add', [App\Http\Controllers\Api\ProCost\LevyDutyController::class, 'store']);
     Route::post('levy-duty/update/{id}', [App\Http\Controllers\Api\ProCost\LevyDutyController::class, 'update']);
+});
+
+Route::group(['middleware' => 'levelsix.checker'], function () {
+    //MarketRouters
+    Route::post('market-router/add', [App\Http\Controllers\Api\ProCost\MarketRoutersController::class, 'store']);
+    Route::post('market-router/update/{id}', [App\Http\Controllers\Api\ProCost\MarketRoutersController::class, 'update']);
 });
 
 Route::group(['middleware' => 'levelfive.checker'], function () {

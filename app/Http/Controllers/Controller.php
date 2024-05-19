@@ -118,10 +118,10 @@ class Controller extends BaseController
     public function formatLogsForMultiple($logs)
     {
         $formattedLogs = $logs->map(function ($log) {
+            dd($this->getUserById($log->user_id));
             $user = $this->getUserById($log->user_id);
             $oldData = json_decode($log->old_data, true);
             $newData = json_decode($log->new_data, true);
-
             return [
                 'action' => $log->action,
                 'user_name' => $user['name'],

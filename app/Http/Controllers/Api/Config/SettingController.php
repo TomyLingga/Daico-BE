@@ -43,8 +43,8 @@ class SettingController extends Controller
         try {
             $data = Setting::findOrFail($id);
 
-            $data->history = $this->formatLogs($data->logs);
-            unset($data->logs);
+            // $data->history = $this->formatLogs($data->logs);
+            // unset($data->logs);
 
             return response()->json([
                 'data' => $data,
@@ -67,8 +67,8 @@ class SettingController extends Controller
         try {
             $data = Setting::where('setting_name',$name)->firstOrFail();
 
-            $data->history = $this->formatLogs($data->logs);
-            unset($data->logs);
+            // $data->history = $this->formatLogs($data->logs);
+            // unset($data->logs);
 
             return response()->json([
                 'data' => $data,
