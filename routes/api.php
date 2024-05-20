@@ -55,6 +55,9 @@ Route::get('bulky/get/{id}', [App\Http\Controllers\Api\Config\MasterBulkyControl
 //Master Bulky Produksi
 Route::get('bulky-prod', [App\Http\Controllers\Api\Config\MasterBulkProduksiController::class, 'index']);
 Route::get('bulky-prod/get/{id}', [App\Http\Controllers\Api\Config\MasterBulkProduksiController::class, 'show']);
+//Master Retail Produksi
+Route::get('retail-prod', [App\Http\Controllers\Api\Config\MasterRetailProduksiController::class, 'index']);
+Route::get('retail-prod/get/{id}', [App\Http\Controllers\Api\Config\MasterRetailProduksiController::class, 'show']);
 //LevyDuty
 Route::get('levy-duty', [App\Http\Controllers\Api\ProCost\LevyDutyController::class, 'index']);
 Route::get('levy-duty/get/{id}', [App\Http\Controllers\Api\ProCost\LevyDutyController::class, 'show']);
@@ -90,6 +93,15 @@ Route::post('daily-dmo/date', [App\Http\Controllers\Api\Target\DailyDmoControlle
 Route::get('monthly-dmo', [App\Http\Controllers\Api\Target\MonthlyDmoController::class, 'index']);
 Route::get('monthly-dmo/get/{id}', [App\Http\Controllers\Api\Target\MonthlyDmoController::class, 'show']);
 Route::post('monthly-dmo/date', [App\Http\Controllers\Api\Target\MonthlyDmoController::class, 'indexDate']);
+//Target Real
+Route::get('target-real', [App\Http\Controllers\Api\Target\TargetRealController::class, 'index']);
+Route::get('target-real/get/{id}', [App\Http\Controllers\Api\Target\TargetRealController::class, 'show']);
+Route::post('target-real/date', [App\Http\Controllers\Api\Target\TargetRealController::class, 'indexDate']);
+//Target RKAP
+Route::get('target-rkap', [App\Http\Controllers\Api\Target\TargetRkapController::class, 'index']);
+Route::get('target-rkap/get/{id}', [App\Http\Controllers\Api\Target\TargetRkapController::class, 'show']);
+Route::post('target-rkap/date', [App\Http\Controllers\Api\Target\TargetRkapController::class, 'indexDate']);
+
 
 Route::group(['middleware' => 'levelone.checker'], function () {
     //Kategori Uraian Produksi
@@ -131,10 +143,19 @@ Route::group(['middleware' => 'levelnine.checker'], function () {
     //master Bulky Produksi
     Route::post('bulky-prod/add', [App\Http\Controllers\Api\Config\MasterBulkProduksiController::class, 'store']);
     Route::post('bulky-prod/update/{id}', [App\Http\Controllers\Api\Config\MasterBulkProduksiController::class, 'update']);
+    //master Retail Produksi
+    Route::post('retail-prod/add', [App\Http\Controllers\Api\Config\MasterRetailProduksiController::class, 'store']);
+    Route::post('retail-prod/update/{id}', [App\Http\Controllers\Api\Config\MasterRetailProduksiController::class, 'update']);
     //setting
     Route::post('settings/add', [App\Http\Controllers\Api\Config\SettingController::class, 'store']);
     Route::post('settings/update/{id}', [App\Http\Controllers\Api\Config\SettingController::class, 'update']);
 
+    //Target Real
+    Route::post('target-real/add', [App\Http\Controllers\Api\Target\TargetRealController::class, 'store']);
+    Route::post('target-real/update/{id}', [App\Http\Controllers\Api\Target\TargetRealController::class, 'update']);
+    //Target RKAP
+    Route::post('target-rkap/add', [App\Http\Controllers\Api\Target\TargetRkapController::class, 'store']);
+    Route::post('target-rkap/update/{id}', [App\Http\Controllers\Api\Target\TargetRkapController::class, 'update']);
 });
 
 Route::group(['middleware' => 'levelseven.checker'], function () {
