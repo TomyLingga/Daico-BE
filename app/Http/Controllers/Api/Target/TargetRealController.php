@@ -119,7 +119,9 @@ class TargetRealController extends Controller
             $data = TargetReal::with('productable')
                 ->whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
                 ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
-                ->orderBy('tanggal')
+                ->orderBy('productable_type', 'desc')
+                ->orderBy('productable_id', 'asc')
+                ->orderBy('tanggal', 'asc')
                 ->get();
 
             if ($data->isEmpty()) {

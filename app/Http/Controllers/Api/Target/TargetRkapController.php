@@ -117,13 +117,12 @@ class TargetRkapController extends Controller
             $tanggal = $request->tanggal;
 
             $data = TargetRKAP::with('productable')
-                            ->whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
-                            ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
-                            ->orderBy(function ($query) {
-                                $query->orderBy('productable_type', 'desc')
-                                    ->orderBy('productable_id', 'asc');
-                            })
-                            ->get();
+                ->whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
+                ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
+                ->orderBy('productable_type', 'desc')
+                ->orderBy('productable_id', 'asc')
+                ->orderBy('tanggal', 'asc')
+                ->get();
 
             if ($data->isEmpty()) {
                 return response()->json(['message' => $this->messageMissing], 401);
