@@ -19,6 +19,7 @@ class LaporanProduksi extends Model
         'id_uraian',
         'tanggal',
         'value',
+        'id_harga_satuan'
     ];
 
     public function uraian()
@@ -34,6 +35,11 @@ class LaporanProduksi extends Model
     public function plant()
     {
         return $this->belongsTo(Plant::class, 'id_plant');
+    }
+
+    public function hargaSatuan()
+    {
+        return $this->belongsTo(HargaSatuanProduksi::class, 'id_harga_satuan');
     }
 
     public function logs()

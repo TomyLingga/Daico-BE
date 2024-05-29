@@ -102,6 +102,10 @@ Route::get('target-rkap', [App\Http\Controllers\Api\Target\TargetRkapController:
 Route::get('target-rkap/get/{id}', [App\Http\Controllers\Api\Target\TargetRkapController::class, 'show']);
 Route::post('target-rkap/date', [App\Http\Controllers\Api\Target\TargetRkapController::class, 'indexDate']);
 
+//Harga Satuan Produksi
+Route::get('harga-satuan', [App\Http\Controllers\Api\Config\HargaSatuanProduksiController::class, 'index']);
+Route::get('harga-satuan/get/{id}', [App\Http\Controllers\Api\Config\HargaSatuanProduksiController::class, 'show']);
+Route::get('harga-satuan/latest', [App\Http\Controllers\Api\Config\HargaSatuanProduksiController::class, 'indexLatest']);
 
 Route::group(['middleware' => 'levelone.checker'], function () {
     //Kategori Uraian Produksi
@@ -119,6 +123,8 @@ Route::group(['middleware' => 'levelone.checker'], function () {
 });
 
 Route::group(['middleware' => 'levelnine.checker'], function () {
+    //harga satuan produksi
+    Route::post('harga-satuan/add', [App\Http\Controllers\Api\Config\HargaSatuanProduksiController::class, 'store']);
     //allocation
     Route::post('allocation/add', [App\Http\Controllers\Api\Config\AllocationController::class, 'store']);
     Route::post('allocation/update/{id}', [App\Http\Controllers\Api\Config\AllocationController::class, 'update']);

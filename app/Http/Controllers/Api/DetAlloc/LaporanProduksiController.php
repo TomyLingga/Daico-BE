@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\DetAlloc;
 
 use App\Http\Controllers\Controller;
+use App\Models\HargaSatuanProduksi;
 use App\Models\LaporanProduksi;
 use App\Models\Plant;
 use App\Models\Setting;
@@ -48,14 +49,28 @@ class LaporanProduksiController extends Controller
 
             UraianProduksi::findOrFail($request->id_uraian);
 
-            $data = LaporanProduksi::create($request->all());
+            $latestHargaSatuan = HargaSatuanProduksi::where('id_uraian_produksi', $request->id_uraian)
+            ->orderBy('created_at', 'desc')
+            ->first();
 
-            LoggerService::logAction($this->userData, $data, 'create', null, $data->toArray());
+            if (!$latestHargaSatuan) {
+                return response()->json([
+                    'message' => 'No HargaSatuanProduksi found for the given id_uraian_produksi',
+                    'success' => false,
+                ], 404);
+            }
+
+            $data = $request->all();
+            $data['id_harga_satuan'] = $latestHargaSatuan->id;
+
+            $laporanProduksi = LaporanProduksi::create($data);
+
+            LoggerService::logAction($this->userData, $laporanProduksi, 'create', null, $laporanProduksi->toArray());
 
             DB::commit();
 
             return response()->json([
-                'data' => $data,
+                'data' => $laporanProduksi,
                 'message' => $this->messageCreate,
                 // 'code' => 200,
                 'success' => true,
@@ -98,10 +113,23 @@ class LaporanProduksiController extends Controller
             }
             UraianProduksi::findOrFail($request->id_uraian);
 
+            $latestHargaSatuan = HargaSatuanProduksi::where('id_uraian_produksi', $request->id_uraian)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+            if (!$latestHargaSatuan) {
+                return response()->json([
+                    'message' => 'No HargaSatuanProduksi found for the given id_uraian_produksi',
+                    'success' => false,
+                ], 404);
+            }
+
             $data = LaporanProduksi::findOrFail($id);
             $oldData = $data->toArray();
 
-            $data->update($request->all());
+            $updateData = $request->all();
+            $updateData['id_harga_satuan'] = $latestHargaSatuan->id;
+            $data->update($updateData);
 
             LoggerService::logAction($this->userData, $data, 'update', $oldData, $data->toArray());
 
@@ -124,98 +152,64 @@ class LaporanProduksiController extends Controller
         }
     }
 
-    // public function indexDate(Request $request)
-    // {
-    //     try {
-    //         $tanggal = $request->tanggal;
-
-    //         $data = LaporanProduksi::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
-    //             ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
-    //             ->with(['uraian.kategori', 'plant'])
-    //             ->orderBy('tanggal')
-    //             ->get();
-
-    //         if ($data->isEmpty()) {
-    //             return response()->json(['message' => $this->messageMissing], 401);
-    //         }
-    //         $settingNames = ['konversi_liter_to_kg', 'pouch_to_box_1_liter', 'pouch_to_box_2_liter', 'konversi_m_liter_to_kg'];
-
-    //         $settings = Setting::whereIn('setting_name', $settingNames)->get();
-
-    //         $groupedData = $data->groupBy(function ($item) {
-    //             return $item->uraian->kategori->nama;
-    //         });
-
-    //         // $groupedData = $data->groupBy('id_uraian')->map(function ($group) {
-    //         //     $totalValue = $group->sum('value');
-    //         //     $uraianName = $group->first()->uraian->nama;
-    //         //     $group->each(function ($item) use ($totalValue, $uraianName) {
-    //         //         $item['total_' . str_replace(' ', '_', $uraianName)] = $totalValue;
-    //         //     });
-    //         //     return $group;
-    //         // });
-
-    //         // // Flatten the grouped data to a single level
-    //         // $flattenedData = $groupedData->flatten(1);
-
-    //         return response()->json(['data' => $groupedData, 'setting' => $settings, 'message' => $this->messageAll], 200);
-
-    //     } catch (QueryException $e) {
-    //         return response()->json([
-    //             'message' => $this->messageFail,
-    //             'err' => $e->getTrace()[0],
-    //             'errMsg' => $e->getMessage(),
-    //             // 'code' => 500,
-    //             'success' => false,
-    //         ], 500);
-    //     }
-    // }
     public function indexDate(Request $request)
     {
         try {
             $tanggal = $request->tanggal;
 
-            // Fetch data with relationships
             $data = LaporanProduksi::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
                 ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
-                ->with(['uraian.kategori', 'plant'])
-                ->orderBy('tanggal')
+                ->with(['uraian.kategori', 'hargaSatuan', 'plant'])
                 ->get();
 
             if ($data->isEmpty()) {
                 return response()->json(['message' => $this->messageMissing], 401);
             }
 
-            // Fetch settings
             $settingNames = ['konversi_liter_to_kg', 'pouch_to_box_1_liter', 'pouch_to_box_2_liter', 'konversi_m_liter_to_kg'];
             $settings = Setting::whereIn('setting_name', $settingNames)->get();
 
-            // Group data by kategori and then by id_uraian
             $groupedData = [];
             foreach ($data as $item) {
                 $kategoriName = $item->uraian->kategori->nama;
+                $kategoriId = $item->uraian->kategori->id;
                 $uraianName = $item->uraian->nama;
-                if (!isset($groupedData[$kategoriName])) {
-                    $groupedData[$kategoriName] = [];
-                }
-                if (!isset($groupedData[$kategoriName][$uraianName])) {
-                    $groupedData[$kategoriName][$uraianName] = [
-                        'items' => [],
-                        'total_value' => 0
+
+                // Calculate finalValue
+                $item->finalValue = $item->value * $item->hargaSatuan->value;
+
+                if (!isset($groupedData[$kategoriId])) {
+                    $groupedData[$kategoriId] = [
+                        'name' => $kategoriName,
+                        'items' => []
                     ];
                 }
-                $groupedData[$kategoriName][$uraianName]['items'][] = $item;
-                $groupedData[$kategoriName][$uraianName]['total_value'] += $item->value;
+                if (!isset($groupedData[$kategoriId]['items'][$uraianName])) {
+                    $groupedData[$kategoriId]['items'][$uraianName] = [
+                        'items' => [],
+                        'total_value' => 0,
+                        'total_finalValue' => 0
+                    ];
+                }
+                $groupedData[$kategoriId]['items'][$uraianName]['items'][] = $item;
+                $groupedData[$kategoriId]['items'][$uraianName]['total_value'] += $item->value;
+                $groupedData[$kategoriId]['items'][$uraianName]['total_finalValue'] += $item->finalValue;
             }
 
-            // Prepare final structure for response
+            ksort($groupedData);
+
             $finalData = [];
-            foreach ($groupedData as $kategori => $uraianGroups) {
-                $finalData[$kategori] = [];
-                foreach ($uraianGroups as $uraian => $group) {
-                    $finalData[$kategori] = array_merge($finalData[$kategori], $group['items']);
-                    $totalKey = 'total ' . $uraian;
-                    $finalData[$kategori][] = [$totalKey => $group['total_value']];
+            foreach ($groupedData as $kategoriData) {
+                $kategoriName = $kategoriData['name'];
+                $finalData[$kategoriName] = [];
+                foreach ($kategoriData['items'] as $uraian => $group) {
+                    $finalData[$kategoriName] = array_merge($finalData[$kategoriName], $group['items']);
+                    $totalQtyKey = 'total qty ' . $uraian;
+                    $totalFinalValueKey = 'total finalValue ' . $uraian;
+                    $finalData[$kategoriName][] = [
+                        $totalQtyKey => $group['total_value'],
+                        $totalFinalValueKey => $group['total_finalValue']
+                    ];
                 }
             }
 
@@ -238,11 +232,12 @@ class LaporanProduksiController extends Controller
     public function show($id)
     {
         try {
-            $data = LaporanProduksi::with(['uraian.kategori', 'plant'])->find($id);
+            $data = LaporanProduksi::with(['uraian.kategori', 'hargaSatuan' , 'plant'])->find($id);
 
             // $data['history'] = $this->formatLogs($data->logs);
             // unset($data->logs);
 
+            $data->finalValue = $data->value * $data->hargaSatuan->value;
 
             return response()->json([
                 'data' => $data,
