@@ -28,6 +28,7 @@ class OutstandingController extends Controller
                 'kontrak' => 'required',
                 'supplier' => 'required',
                 'qty' => 'required|numeric',
+                'qty_out' => 'required|numeric',
                 'harga' => 'required|numeric',
             ]);
 
@@ -126,6 +127,7 @@ class OutstandingController extends Controller
                 'kontrak' => 'required',
                 'supplier' => 'required',
                 'qty' => 'required|numeric',
+                'qty_out' => 'required|numeric',
                 'harga' => 'required|numeric',
             ];
 

@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class AddTambahanToLaporanProduksiTable extends Migration
+class AddTambahanToOutstandingCpoTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,8 +13,8 @@ class AddTambahanToLaporanProduksiTable extends Migration
      */
     public function up()
     {
-        Schema::table('laporan_produksi', function (Blueprint $table) {
-            $table->foreignId('id_harga_satuan')->nullable()->constrained('harga_satuan_produksi');
+        Schema::table('outstanding_cpo', function (Blueprint $table) {
+            $table->decimal('qty_out', 30, 2)->nullable();
         });
     }
 
@@ -25,8 +25,8 @@ class AddTambahanToLaporanProduksiTable extends Migration
      */
     public function down()
     {
-        Schema::table('laporan_produksi', function (Blueprint $table) {
-            $table->dropColumn(['id_harga_satuan']);
+        Schema::table('outstanding_cpo', function (Blueprint $table) {
+            $table->dropColumn(['qty_out']);
         });
     }
 }
