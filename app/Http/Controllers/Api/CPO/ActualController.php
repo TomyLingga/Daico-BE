@@ -27,6 +27,7 @@ class ActualController extends Controller
             $validator = Validator::make($request->all(), [
                 'tanggal' => 'required|date|unique:actual_in_cpo,tanggal',
                 'qty' => 'required|numeric',
+                'qty_out' => 'required|numeric',
                 'harga' => 'required|numeric',
             ]);
 
@@ -156,6 +157,7 @@ class ActualController extends Controller
             $rules = [
                 'tanggal' => 'required|date|unique:actual_in_cpo,tanggal,' . $id,
                 'qty' => 'required|numeric',
+                'qty_out' => 'required|numeric',
                 'harga' => 'required|numeric',
             ];
 
