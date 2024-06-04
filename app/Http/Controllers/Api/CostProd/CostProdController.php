@@ -31,7 +31,7 @@ class CostProdController extends Controller
         $allGlData = collect();
 
         foreach ($coaValues as $coaValue) {
-            $costProd = $this->getGeneralLedgerDataWithCoa($date, $coaValue);
+            $costProd = $this->getGeneralLedgerDataWithCoaPosted($date, $coaValue);
             $allGlData = $allGlData->merge($costProd);
         }
 

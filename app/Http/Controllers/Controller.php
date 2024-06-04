@@ -21,6 +21,7 @@ class Controller extends BaseController
     public $urlAllUser;
     public $urlGeneralLedger;
     public $urlGeneralLedgerCoa;
+    public $urlGeneralLedgerCoaPosted;
 
     public function __construct()
     {
@@ -33,6 +34,7 @@ class Controller extends BaseController
             $this->urlAllUser = env('BASE_URL_PORTAL')."user";
             $this->urlGeneralLedger = env('BASE_URL_ODOO')."account_move_line/index";
             $this->urlGeneralLedgerCoa = env('BASE_URL_ODOO')."account_move_line/coa";
+            $this->urlGeneralLedgerCoaPosted = env('BASE_URL_ODOO')."account_move_line/posted";
             return $next($request);
         });
     }
@@ -51,6 +53,18 @@ class Controller extends BaseController
         $response = Http::withHeaders([
             'Authorization' => $this->token,
         ])->post($this->urlGeneralLedgerCoa, [
+            'tanggal' => $tanggal,
+            'coa' => $coa
+        ])->json();
+
+        return $response['data'] ?? [];
+    }
+
+    public function getGeneralLedgerDataWithCoaPosted($tanggal, $coa)
+    {
+        $response = Http::withHeaders([
+            'Authorization' => $this->token,
+        ])->post($this->urlGeneralLedgerCoaPosted, [
             'tanggal' => $tanggal,
             'coa' => $coa
         ])->json();
