@@ -69,7 +69,7 @@ class cCentreController extends Controller
 
         try {
             $validator = Validator::make($request->all(), [
-                'nama' => 'required',
+                'nama' => 'required|unique:c_centre,nama',
             ]);
 
             if ($validator->fails()) {
@@ -109,6 +109,19 @@ class cCentreController extends Controller
         DB::beginTransaction();
 
         try {
+
+            $validator = Validator::make($request->all(), [
+                'nama' => 'required|unique:c_centre,nama,' . $id,
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => $validator->errors(),
+                    // 'code' => 400,
+                    'success' => false
+                ], 400);
+            }
+
             $cCenter = cCentre::find($id);
 
             if (!$cCenter) {
@@ -118,18 +131,6 @@ class cCentreController extends Controller
                     'success' => true,
                     // 'code' => 401
                 ], 401);
-            }
-
-            $validator = Validator::make($request->all(), [
-                'nama' => 'required',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'message' => $validator->errors(),
-                    // 'code' => 400,
-                    'success' => false
-                ], 400);
             }
 
             $dataToUpdate = [

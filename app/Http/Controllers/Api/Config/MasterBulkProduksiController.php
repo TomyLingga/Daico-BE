@@ -68,7 +68,7 @@ class MasterBulkProduksiController extends Controller
 
         try {
             $validator = Validator::make($request->all(), [
-                'name' => 'required',
+                'name' => 'required|unique:master_bulk_produksi,name',
             ]);
 
             if ($validator->fails()) {
@@ -110,7 +110,7 @@ class MasterBulkProduksiController extends Controller
         try {
 
             $validator = Validator::make($request->all(), [
-                'name' => 'required',
+                'name' => 'required|unique:master_bulk_produksi,name,' . $id,
             ]);
 
             if ($validator->fails()) {

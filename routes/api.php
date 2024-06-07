@@ -107,6 +107,29 @@ Route::get('harga-satuan', [App\Http\Controllers\Api\Config\HargaSatuanProduksiC
 Route::get('harga-satuan/get/{id}', [App\Http\Controllers\Api\Config\HargaSatuanProduksiController::class, 'show']);
 Route::get('harga-satuan/latest', [App\Http\Controllers\Api\Config\HargaSatuanProduksiController::class, 'indexLatest']);
 
+//KURS MANDIRI
+Route::get('kurs-mandiri', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'index']);
+Route::get('kurs-mandiri/get/{id}', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'show']);
+Route::post('kurs-mandiri/date', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'indexDate']);
+Route::get('kurs-mandiri/latest', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'indexDate']);
+
+//Jenis Rekening
+Route::get('jenis-rekening', [App\Http\Controllers\Api\Config\MasterJenisRekeningController::class, 'index']);
+Route::get('jenis-rekening/get/{id}', [App\Http\Controllers\Api\Config\MasterJenisRekeningController::class, 'show']);
+
+//Tipe Rekening
+Route::get('tipe-rekening', [App\Http\Controllers\Api\Config\MasterTipeRekeningController::class, 'index']);
+Route::get('tipe-rekening/get/{id}', [App\Http\Controllers\Api\Config\MasterTipeRekeningController::class, 'show']);
+//Rekening
+Route::get('rekening', [App\Http\Controllers\Api\Config\MasterRekeningController::class, 'index']);
+Route::get('rekening/get/{id}', [App\Http\Controllers\Api\Config\MasterRekeningController::class, 'show']);
+//Rekening Unit Kerja
+Route::get('rekening-unit', [App\Http\Controllers\Api\Cash\RekeningUnitKerjaController::class, 'index']);
+Route::get('rekening-unit/get/{id}', [App\Http\Controllers\Api\Cash\RekeningUnitKerjaController::class, 'show']);
+Route::get('rekening-unit/latest', [App\Http\Controllers\Api\Cash\RekeningUnitKerjaController::class, 'indexLatest']);
+Route::get('rekening-unit/tipe/{id}', [App\Http\Controllers\Api\Cash\RekeningUnitKerjaController::class, 'indexTipe']);
+
+
 Route::group(['middleware' => 'levelone.checker'], function () {
     //Kategori Uraian Produksi
     Route::post('kategori-produksi/add', [App\Http\Controllers\Api\Config\KategoriUraianProduksiController::class, 'store']);
@@ -155,13 +178,27 @@ Route::group(['middleware' => 'levelnine.checker'], function () {
     //setting
     Route::post('settings/add', [App\Http\Controllers\Api\Config\SettingController::class, 'store']);
     Route::post('settings/update/{id}', [App\Http\Controllers\Api\Config\SettingController::class, 'update']);
-
     //Target Real
     Route::post('target-real/add', [App\Http\Controllers\Api\Target\TargetRealController::class, 'store']);
     Route::post('target-real/update/{id}', [App\Http\Controllers\Api\Target\TargetRealController::class, 'update']);
     //Target RKAP
     Route::post('target-rkap/add', [App\Http\Controllers\Api\Target\TargetRkapController::class, 'store']);
     Route::post('target-rkap/update/{id}', [App\Http\Controllers\Api\Target\TargetRkapController::class, 'update']);
+    //Kurs Mandiri
+    Route::post('kurs-mandiri/add', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'store']);
+    Route::post('kurs-mandiri/update/{id}', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'update']);
+    //Jenis Rekening
+    Route::post('jenis-rekening/add', [App\Http\Controllers\Api\Config\MasterJenisRekeningController::class, 'store']);
+    Route::post('jenis-rekening/update/{id}', [App\Http\Controllers\Api\Config\MasterJenisRekeningController::class, 'update']);
+    //Tipe Rekening
+    Route::post('tipe-rekening/add', [App\Http\Controllers\Api\Config\MasterTipeRekeningController::class, 'store']);
+    Route::post('tipe-rekening/update/{id}', [App\Http\Controllers\Api\Config\MasterTipeRekeningController::class, 'update']);
+    //Rekening
+    Route::post('rekening/add', [App\Http\Controllers\Api\Config\MasterRekeningController::class, 'store']);
+    Route::post('rekening/update/{id}', [App\Http\Controllers\Api\Config\MasterRekeningController::class, 'update']);
+    //Rekening
+    Route::post('rekening-unit/add', [App\Http\Controllers\Api\Cash\RekeningUnitKerjaController::class, 'store']);
+    Route::post('rekening-unit/update/{id}', [App\Http\Controllers\Api\Cash\RekeningUnitKerjaController::class, 'update']);
 });
 
 Route::group(['middleware' => 'levelseven.checker'], function () {

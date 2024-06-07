@@ -22,6 +22,8 @@ class Controller extends BaseController
     public $urlGeneralLedger;
     public $urlGeneralLedgerCoa;
     public $urlGeneralLedgerCoaPosted;
+    // public $urlCurrency;
+    public $urlCurrencyGet;
 
     public function __construct()
     {
@@ -35,9 +37,25 @@ class Controller extends BaseController
             $this->urlGeneralLedger = env('BASE_URL_ODOO')."account_move_line/index";
             $this->urlGeneralLedgerCoa = env('BASE_URL_ODOO')."account_move_line/coa";
             $this->urlGeneralLedgerCoaPosted = env('BASE_URL_ODOO')."account_move_line/posted";
+            // $this->urlCurrency = env('BASE_URL_ODOO')."currency/index";
+            $this->urlCurrencyGet = env('BASE_URL_ODOO')."currency/get/";
             return $next($request);
         });
     }
+
+    public function getCurrency($id)
+    {
+        return Http::withHeaders([
+            'Authorization' => $this->token,
+        ])->get($this->urlCurrencyGet. $id)->json()['data'] ?? [];
+    }
+
+    // public function getCurrencies()
+    // {
+    //     return Http::withHeaders([
+    //         'Authorization' => $this->token,
+    //     ])->get($this->urlCurrency)->json()['data'] ?? [];
+    // }
 
     public function getGeneralLedgerData($tanggal)
     {

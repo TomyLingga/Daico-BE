@@ -92,7 +92,7 @@ class SettingController extends Controller
 
         try {
             $validator = Validator::make($request->all(), [
-                'setting_name' => 'required',
+                'setting_name' => 'required|unique:settings,setting_name',
                 'setting_value' => 'required',
             ]);
 

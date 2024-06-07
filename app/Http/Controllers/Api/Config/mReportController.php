@@ -69,7 +69,7 @@ class mReportController extends Controller
 
         try {
             $validator = Validator::make($request->all(), [
-                'nama' => 'required',
+                'nama' => 'required|unique:m_report,nama',
             ]);
 
             if ($validator->fails()) {
@@ -109,6 +109,17 @@ class mReportController extends Controller
         DB::beginTransaction();
 
         try {
+            $validator = Validator::make($request->all(), [
+                'nama' => 'required|unique:m_report,nama,' . $id,
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => $validator->errors(),
+                    // 'code' => 400,
+                    'success' => false
+                ], 400);
+            }
             $mReport = mReport::find($id);
 
             if (!$mReport) {
@@ -120,17 +131,6 @@ class mReportController extends Controller
                 ], 401);
             }
 
-            $validator = Validator::make($request->all(), [
-                'nama' => 'required',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'message' => $validator->errors(),
-                    // 'code' => 400,
-                    'success' => false
-                ], 400);
-            }
 
             $dataToUpdate = [
                 'nama' => $request->filled('nama') ? $request->nama : $mReport->nama,

@@ -3,14 +3,17 @@
 namespace App\Http\Controllers\Api\Config;
 
 use App\Http\Controllers\Controller;
-use App\Models\MasterBulky;
+use App\Models\MasterJenisRekening;
+use App\Models\MasterMataUang;
+use App\Models\MasterRekening;
+use App\Models\MasterTipeRekening;
 use App\Services\LoggerService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
-class MasterBulkyController extends Controller
+class MasterRekeningController extends Controller
 {
     private $messageFail = 'Something went wrong';
     private $messageMissing = 'Data not found in record';
@@ -22,11 +25,18 @@ class MasterBulkyController extends Controller
     public function index()
     {
         try {
-            $mBulky = MasterBulky::all();
+            $data = MasterRekening::with(['jenis', 'tipe'])->get();
 
-            return $mBulky->isEmpty()
-                ? response()->json(['message' => $this->messageMissing], 401)
-                : response()->json(['mBulky' => $mBulky, 'message' => $this->messageAll], 200);
+            if ($data->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            foreach ($data as $entry) {
+                $currency = $this->getCurrency($entry->matauang_id);
+                $entry->matauang = $currency;
+            }
+            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+
         } catch (QueryException $e) {
             return response()->json([
                 'message' => $this->messageFail,
@@ -41,13 +51,14 @@ class MasterBulkyController extends Controller
     public function show($id)
     {
         try {
-            $mBulky = MasterBulky::findOrFail($id);
-
-            // $mBulky->history = $this->formatLogs($mBulky->logs);
-            // unset($mBulky->logs);
+            $data = MasterRekening::with(['jenis', 'tipe'])->findOrFail($id);
+            $currency = $this->getCurrency($data->matauang_id);
+            $data->matauang = $currency;
+            // $data->history = $this->formatLogs($data->logs);
+            // unset($data->logs);
 
             return response()->json([
-                'mBulky' => $mBulky,
+                'data' => $data,
                 'message' => $this->messageSuccess,
                 'code' => 200
             ], 200);
@@ -67,9 +78,16 @@ class MasterBulkyController extends Controller
         DB::beginTransaction();
 
         try {
-            $validator = Validator::make($request->all(), [
-                'name' => 'required|unique:master_bulky,name',
-            ]);
+            $rules = [
+                'nama' => 'required',
+                'nomor' => 'required|unique:master_rekening,nomor',
+                'matauang_id' => 'required|integer',
+                'jenis_id' => 'required|exists:' . MasterJenisRekening::class . ',id',
+                'tipe_id' => 'nullable|exists:' . MasterTipeRekening::class . ',id',
+                'keterangan' => 'required',
+            ];
+
+            $validator = Validator::make($request->all(), $rules);
 
             if ($validator->fails()) {
                 return response()->json([
@@ -79,7 +97,22 @@ class MasterBulkyController extends Controller
                 ], 400);
             }
 
-            $data = MasterBulky::create($request->all());
+            $currency = $this->getCurrency($request->matauang_id);
+
+            if (empty($currency)) {
+                return response()->json([
+                    'message' => 'Currency not found',
+                    'success' => false,
+                ], 404);
+            }
+
+            $data = MasterRekening::create([
+                'nama' => $request->nama,
+                'nomor' => $request->nomor,
+                'matauang_id' => $request->matauang_id, // Use the matauang_id from the request
+                'jenis_id' => $request->jenis_id,
+                'tipe_id' => $request->tipe_id, // This is optional and will be null if not provided
+            ]);
 
             LoggerService::logAction($this->userData, $data, 'create', null, $data->toArray());
 
@@ -108,56 +141,46 @@ class MasterBulkyController extends Controller
         DB::beginTransaction();
 
         try {
+            $rules = [
+                'nama' => 'required',
+                'nomor' => 'required|unique:master_rekening,nomor,' . $id,
+                'matauang_id' => 'required|integer',
+                'jenis_id' => 'required|exists:' . MasterJenisRekening::class . ',id',
+                'tipe_id' => 'required|exists:' . MasterTipeRekening::class . ',id',
+                'keterangan' => 'required',
+            ];
 
-            $validator = Validator::make($request->all(), [
-                'name' => 'required|unique:master_bulky,name,' . $id,
-            ]);
+            $validator = Validator::make($request->all(), $rules);
 
             if ($validator->fails()) {
                 return response()->json([
                     'message' => $validator->errors(),
-                    // 'code' => 400,
-                    'success' => false
+                    'success' => false,
                 ], 400);
             }
 
-            $mBulky = MasterBulky::find($id);
+            $data = MasterRekening::findOrFail($id);
+            $oldData = $data->toArray();
 
-            if (!$mBulky) {
+            $data->update($request->all());
 
-                return response()->json([
-                    'message' => $this->messageMissing,
-                    'success' => true,
-                    // 'code' => 401
-                ], 401);
-            }
-
-            $dataToUpdate = [
-                'name' => $request->filled('name') ? $request->name : $mBulky->name,
-            ];
-
-            $oldData = $mBulky->toArray();
-            $mBulky->update($dataToUpdate);
-
-            LoggerService::logAction($this->userData, $mBulky, 'update', $oldData, $mBulky->toArray());
+            LoggerService::logAction($this->userData, $data, 'update', $oldData, $data->toArray());
 
             DB::commit();
 
             return response()->json([
-                'data' => $mBulky,
+                'data' => $data,
                 'message' => $this->messageUpdate,
-                // 'code' => 200,
-                'success' => true
+                'success' => true,
             ], 200);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollback();
             return response()->json([
                 'message' => $this->messageFail,
                 'err' => $e->getTrace()[0],
                 'errMsg' => $e->getMessage(),
-                // 'code' => 500,
-                'success' => false
+                'success' => false,
             ], 500);
         }
     }

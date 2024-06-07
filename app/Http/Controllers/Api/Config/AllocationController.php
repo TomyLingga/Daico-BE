@@ -69,7 +69,7 @@ class AllocationController extends Controller
 
         try {
             $validator = Validator::make($request->all(), [
-                'nama' => 'required',
+                'nama' => 'required|unique:allocation,nama',
             ]);
 
             if ($validator->fails()) {
@@ -111,7 +111,7 @@ class AllocationController extends Controller
         try {
 
             $validator = Validator::make($request->all(), [
-                'nama' => 'required',
+                'nama' => 'required|unique:allocation,nama,' . $id,
             ]);
 
             if ($validator->fails()) {

@@ -68,7 +68,7 @@ class MasterRetailProduksiController extends Controller
 
         try {
             $validator = Validator::make($request->all(), [
-                'name' => 'required',
+                'name' => 'required|unique:master_retail_produksi,name',
             ]);
 
             if ($validator->fails()) {
@@ -110,7 +110,7 @@ class MasterRetailProduksiController extends Controller
         try {
 
             $validator = Validator::make($request->all(), [
-                'name' => 'required',
+                'name' => 'required|unique:master_retail_produksi,name,' . $id,
             ]);
 
             if ($validator->fails()) {
