@@ -3,14 +3,15 @@
 namespace App\Http\Controllers\Api\Config;
 
 use App\Http\Controllers\Controller;
-use App\Models\MasterRetailProduksi;
+use App\Models\Location;
+use App\Models\Tank;
 use App\Services\LoggerService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
-class MasterRetailProduksiController extends Controller
+class TankController extends Controller
 {
     private $messageFail = 'Something went wrong';
     private $messageMissing = 'Data not found in record';
@@ -22,11 +23,37 @@ class MasterRetailProduksiController extends Controller
     public function index()
     {
         try {
-            $data = MasterRetailProduksi::all();
+            $data = Tank::with('location')->get();
 
-            return $data->isEmpty()
-                ? response()->json(['message' => $this->messageMissing], 401)
-                : response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+            if ($data->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+
+    } catch (QueryException $e) {
+            return response()->json([
+                'message' => $this->messageFail,
+                'err' => $e->getTrace()[0],
+                'errMsg' => $e->getMessage(),
+                // 'code' => 500,
+                'success' => false,
+            ], 500);
+        }
+    }
+
+    public function indexLoctId($id)
+    {
+        try {
+            $data = Tank::where('location_id', $id)
+                ->get();
+
+            if ($data->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+
         } catch (QueryException $e) {
             return response()->json([
                 'message' => $this->messageFail,
@@ -41,8 +68,7 @@ class MasterRetailProduksiController extends Controller
     public function show($id)
     {
         try {
-            $data = MasterRetailProduksi::findOrFail($id);
-
+            $data = Tank::with('location')->findOrFail($id);
             // $data->history = $this->formatLogs($data->logs);
             // unset($data->logs);
 
@@ -67,9 +93,13 @@ class MasterRetailProduksiController extends Controller
         DB::beginTransaction();
 
         try {
-            $validator = Validator::make($request->all(), [
-                'name' => 'required|unique:master_retail_produksi,name',
-            ]);
+            $rules = [
+                'location_id' => 'required|exists:' . Location::class . ',id',
+                'name' => 'required|unique:tank,name',
+                'capacity' => 'required|numeric',
+            ];
+
+            $validator = Validator::make($request->all(), $rules);
 
             if ($validator->fails()) {
                 return response()->json([
@@ -79,7 +109,8 @@ class MasterRetailProduksiController extends Controller
                 ], 400);
             }
 
-            $data = MasterRetailProduksi::create($request->all());
+            $data = Tank::create($request->all());
+
 
             LoggerService::logAction($this->userData, $data, 'create', null, $data->toArray());
 
@@ -108,36 +139,25 @@ class MasterRetailProduksiController extends Controller
         DB::beginTransaction();
 
         try {
+            $rules = [
+                'location_id' => 'required|exists:' . Location::class . ',id',
+                'name' => 'required|unique:tank,name,' . $id,
+                'capacity' => 'required|numeric',
+            ];
 
-            $validator = Validator::make($request->all(), [
-                'name' => 'required|unique:master_retail_produksi,name,' . $id,
-            ]);
+            $validator = Validator::make($request->all(), $rules);
 
             if ($validator->fails()) {
                 return response()->json([
                     'message' => $validator->errors(),
-                    // 'code' => 400,
-                    'success' => false
+                    'success' => false,
                 ], 400);
             }
 
-            $data = MasterRetailProduksi::find($id);
-
-            if (!$data) {
-
-                return response()->json([
-                    'message' => $this->messageMissing,
-                    'success' => true,
-                    // 'code' => 401
-                ], 401);
-            }
-
-            $dataToUpdate = [
-                'name' => $request->filled('name') ? $request->name : $data->name,
-            ];
-
+            $data = Tank::findOrFail($id);
             $oldData = $data->toArray();
-            $data->update($dataToUpdate);
+
+            $data->update($request->all());
 
             LoggerService::logAction($this->userData, $data, 'update', $oldData, $data->toArray());
 
@@ -146,18 +166,16 @@ class MasterRetailProduksiController extends Controller
             return response()->json([
                 'data' => $data,
                 'message' => $this->messageUpdate,
-                // 'code' => 200,
-                'success' => true
+                'success' => true,
             ], 200);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollback();
             return response()->json([
                 'message' => $this->messageFail,
                 'err' => $e->getTrace()[0],
                 'errMsg' => $e->getMessage(),
-                // 'code' => 500,
-                'success' => false
+                'success' => false,
             ], 500);
         }
     }

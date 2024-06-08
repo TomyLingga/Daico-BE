@@ -23,6 +23,8 @@ class MasterRekening extends Model
         'keterangan'
     ];
 
+    protected $hidden = ['created_at', 'updated_at'];
+
     public function logs()
     {
         return $this->morphMany(Log::class, 'model');

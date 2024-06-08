@@ -6,28 +6,25 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 
-class MasterBulky extends Model
+class MasterProduct extends Model
 {
     use HasFactory, Notifiable;
 
     protected $primaryKey = 'id';
 
-    protected $table = 'master_bulky';
+    protected $table = 'master_product';
 
     protected $fillable = [
-        'name'
+        'productable_id',
+        'productable_type',
+        'nama'
     ];
 
     protected $hidden = ['created_at', 'updated_at'];
 
-    public function marketRouters()
+    public function productable()
     {
-        return $this->hasMany(MarketRoutersBulky::class, 'id_bulky');
-    }
-
-    public function levyDuty()
-    {
-        return $this->hasMany(LevyDutyBulky::class, 'id_bulky');
+        return $this->morphTo();
     }
 
     public function logs()
@@ -35,9 +32,9 @@ class MasterBulky extends Model
         return $this->morphMany(Log::class, 'model');
     }
 
-    public function product()
+    public function subProduct()
     {
-        return $this->morphOne(MasterProduct::class, 'productable');
+        return $this->hasMany(MasterSubProduct::class, 'product_id');
     }
 
     public function initialSupply()

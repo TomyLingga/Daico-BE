@@ -6,16 +6,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 
-class MasterTipeRekening extends Model
+class Location extends Model
 {
     use HasFactory, Notifiable;
 
     protected $primaryKey = 'id';
 
-    protected $table = 'master_tipe_cash_on_hand';
+    protected $table = 'location';
 
     protected $fillable = [
-        'nama',
+        'name'
     ];
 
     protected $hidden = ['created_at', 'updated_at'];
@@ -25,8 +25,8 @@ class MasterTipeRekening extends Model
         return $this->morphMany(Log::class, 'model');
     }
 
-    public function rekening()
+    public function tank()
     {
-        return $this->hasMany(MasterRekening::class, 'tipe_id');
+        return $this->hasMany(Tank::class, 'location_id');
     }
 }

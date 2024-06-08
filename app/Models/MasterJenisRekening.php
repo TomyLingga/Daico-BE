@@ -18,6 +18,8 @@ class MasterJenisRekening extends Model
         'nama',
     ];
 
+    protected $hidden = ['created_at', 'updated_at'];
+
     public function logs()
     {
         return $this->morphMany(Log::class, 'model');

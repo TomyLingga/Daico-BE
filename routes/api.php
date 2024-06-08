@@ -129,6 +129,33 @@ Route::get('rekening-unit/get/{id}', [App\Http\Controllers\Api\Cash\RekeningUnit
 Route::get('rekening-unit/latest', [App\Http\Controllers\Api\Cash\RekeningUnitKerjaController::class, 'indexLatest']);
 Route::get('rekening-unit/tipe/{id}', [App\Http\Controllers\Api\Cash\RekeningUnitKerjaController::class, 'indexTipe']);
 
+//Master Product
+Route::get('product', [App\Http\Controllers\Api\Config\MasterProductController::class, 'index']);
+Route::get('product/get/{id}', [App\Http\Controllers\Api\Config\MasterProductController::class, 'show']);
+Route::get('product/productable/{id}/{type}', [App\Http\Controllers\Api\Config\MasterProductController::class, 'showProductable']);
+
+//Master Sub Product
+Route::get('sub-product', [App\Http\Controllers\Api\Config\MasterSubProductController::class, 'index']);
+Route::get('sub-product/get/{id}', [App\Http\Controllers\Api\Config\MasterSubProductController::class, 'show']);
+Route::get('sub-product/product/{id}', [App\Http\Controllers\Api\Config\MasterSubProductController::class, 'indexProdId']);
+
+//Master Retail Produksi
+Route::get('retail', [App\Http\Controllers\Api\Config\MasterRetailController::class, 'index']);
+Route::get('retail/get/{id}', [App\Http\Controllers\Api\Config\MasterRetailController::class, 'show']);
+
+//Intial Supply
+Route::get('initial-supply', [App\Http\Controllers\Api\AvgPrice\InitialSupplyController::class, 'index']);
+Route::get('initial-supply/get/{id}', [App\Http\Controllers\Api\AvgPrice\InitialSupplyController::class, 'show']);
+Route::post('initial-supply/date', [App\Http\Controllers\Api\AvgPrice\InitialSupplyController::class, 'indexDate']);
+
+//Location
+Route::get('location', [App\Http\Controllers\Api\Config\LocationController::class, 'index']);
+Route::get('location/get/{id}', [App\Http\Controllers\Api\Config\LocationController::class, 'show']);
+//Master Sub Product
+Route::get('tank', [App\Http\Controllers\Api\Config\TankController::class, 'index']);
+Route::get('tank/get/{id}', [App\Http\Controllers\Api\Config\TankController::class, 'show']);
+Route::get('tank/location/{id}', [App\Http\Controllers\Api\Config\TankController::class, 'indexLoctId']);
+
 
 Route::group(['middleware' => 'levelone.checker'], function () {
     //Kategori Uraian Produksi
@@ -199,6 +226,27 @@ Route::group(['middleware' => 'levelnine.checker'], function () {
     //Rekening
     Route::post('rekening-unit/add', [App\Http\Controllers\Api\Cash\RekeningUnitKerjaController::class, 'store']);
     Route::post('rekening-unit/update/{id}', [App\Http\Controllers\Api\Cash\RekeningUnitKerjaController::class, 'update']);
+    //Master Product
+    Route::post('product/add', [App\Http\Controllers\Api\Config\MasterProductController::class, 'store']);
+    Route::post('product/update/{id}', [App\Http\Controllers\Api\Config\MasterProductController::class, 'update']);
+    //Master Product
+    Route::post('sub-product/add', [App\Http\Controllers\Api\Config\MasterSubProductController::class, 'store']);
+    Route::post('sub-product/update/{id}', [App\Http\Controllers\Api\Config\MasterSubProductController::class, 'update']);
+    //master Retail Produksi
+    Route::post('retail/add', [App\Http\Controllers\Api\Config\MasterRetailController::class, 'store']);
+    Route::post('retail/update/{id}', [App\Http\Controllers\Api\Config\MasterRetailController::class, 'update']);
+
+    //Intial Supply
+    Route::post('initial-supply/add', [App\Http\Controllers\Api\AvgPrice\InitialSupplyController::class, 'store']);
+    Route::post('initial-supply/update/{id}', [App\Http\Controllers\Api\AvgPrice\InitialSupplyController::class, 'update']);
+
+    //location
+    Route::post('location/add', [App\Http\Controllers\Api\Config\LocationController::class, 'store']);
+    Route::post('location/update/{id}', [App\Http\Controllers\Api\Config\LocationController::class, 'update']);
+
+    //tank
+    Route::post('tank/add', [App\Http\Controllers\Api\Config\TankController::class, 'store']);
+    Route::post('tank/update/{id}', [App\Http\Controllers\Api\Config\TankController::class, 'update']);
 });
 
 Route::group(['middleware' => 'levelseven.checker'], function () {

@@ -3,14 +3,14 @@
 namespace App\Http\Controllers\Api\Config;
 
 use App\Http\Controllers\Controller;
-use App\Models\MasterRetailProduksi;
+use App\Models\Location;
 use App\Services\LoggerService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
-class MasterRetailProduksiController extends Controller
+class LocationController extends Controller
 {
     private $messageFail = 'Something went wrong';
     private $messageMissing = 'Data not found in record';
@@ -22,7 +22,7 @@ class MasterRetailProduksiController extends Controller
     public function index()
     {
         try {
-            $data = MasterRetailProduksi::all();
+            $data = Location::all();
 
             return $data->isEmpty()
                 ? response()->json(['message' => $this->messageMissing], 401)
@@ -41,7 +41,7 @@ class MasterRetailProduksiController extends Controller
     public function show($id)
     {
         try {
-            $data = MasterRetailProduksi::findOrFail($id);
+            $data = Location::findOrFail($id);
 
             // $data->history = $this->formatLogs($data->logs);
             // unset($data->logs);
@@ -68,7 +68,7 @@ class MasterRetailProduksiController extends Controller
 
         try {
             $validator = Validator::make($request->all(), [
-                'name' => 'required|unique:master_retail_produksi,name',
+                'name' => 'required|unique:location,name',
             ]);
 
             if ($validator->fails()) {
@@ -79,7 +79,7 @@ class MasterRetailProduksiController extends Controller
                 ], 400);
             }
 
-            $data = MasterRetailProduksi::create($request->all());
+            $data = Location::create($request->all());
 
             LoggerService::logAction($this->userData, $data, 'create', null, $data->toArray());
 
@@ -110,7 +110,7 @@ class MasterRetailProduksiController extends Controller
         try {
 
             $validator = Validator::make($request->all(), [
-                'name' => 'required|unique:master_retail_produksi,name,' . $id,
+                'name' => 'required|unique:location,name,' . $id,
             ]);
 
             if ($validator->fails()) {
@@ -121,7 +121,7 @@ class MasterRetailProduksiController extends Controller
                 ], 400);
             }
 
-            $data = MasterRetailProduksi::find($id);
+            $data = Location::find($id);
 
             if (!$data) {
 
