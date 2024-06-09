@@ -30,6 +30,11 @@ class StokBulky extends Model
         return $this->morphTo();
     }
 
+    public function tank()
+    {
+        return $this->belongsTo(Tank::class, 'tank_id');
+    }
+
     public function logs()
     {
         return $this->morphMany(Log::class, 'model');

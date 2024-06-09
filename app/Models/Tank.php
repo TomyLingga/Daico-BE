@@ -31,4 +31,9 @@ class Tank extends Model
     {
         return $this->belongsTo(Location::class, 'location_id');
     }
+
+    public function stokBulky()
+    {
+        return $this->hasMany(StokBulky::class, 'tank_id');
+    }
 }

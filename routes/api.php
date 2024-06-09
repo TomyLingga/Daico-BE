@@ -155,7 +155,11 @@ Route::get('location/get/{id}', [App\Http\Controllers\Api\Config\LocationControl
 Route::get('tank', [App\Http\Controllers\Api\Config\TankController::class, 'index']);
 Route::get('tank/get/{id}', [App\Http\Controllers\Api\Config\TankController::class, 'show']);
 Route::get('tank/location/{id}', [App\Http\Controllers\Api\Config\TankController::class, 'indexLoctId']);
-
+//StockBulky
+Route::get('stock-bulky', [App\Http\Controllers\Api\Stock\StokBulkyController::class, 'index']);
+Route::get('stock-bulky/get/{id}', [App\Http\Controllers\Api\Stock\StokBulkyController::class, 'show']);
+Route::post('stock-bulky/date', [App\Http\Controllers\Api\Stock\StokBulkyController::class, 'indexDate']);
+Route::post('stock-bulky/period', [App\Http\Controllers\Api\Stock\StokBulkyController::class, 'indexPeriod']);
 
 Route::group(['middleware' => 'levelone.checker'], function () {
     //Kategori Uraian Produksi
@@ -247,6 +251,10 @@ Route::group(['middleware' => 'levelnine.checker'], function () {
     //tank
     Route::post('tank/add', [App\Http\Controllers\Api\Config\TankController::class, 'store']);
     Route::post('tank/update/{id}', [App\Http\Controllers\Api\Config\TankController::class, 'update']);
+
+    //StokBulky
+    Route::post('stock-bulky/add', [App\Http\Controllers\Api\Stock\StokBulkyController::class, 'store']);
+    Route::post('stock-bulky/update/{id}', [App\Http\Controllers\Api\Stock\StokBulkyController::class, 'update']);
 });
 
 Route::group(['middleware' => 'levelseven.checker'], function () {

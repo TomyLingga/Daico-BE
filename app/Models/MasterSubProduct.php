@@ -35,4 +35,9 @@ class MasterSubProduct extends Model
     {
         return $this->morphOne(InitialSupply::class, 'productable');
     }
+
+    public function stokBulky()
+    {
+        return $this->morphOne(StokBulky::class, 'productable');
+    }
 }

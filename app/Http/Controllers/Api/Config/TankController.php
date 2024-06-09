@@ -23,7 +23,11 @@ class TankController extends Controller
     public function index()
     {
         try {
-            $data = Tank::with('location')->get();
+            $data = Tank::with(['location' => function ($query) {
+                $query->orderBy('name');
+            }])
+                ->orderBy('name')
+                ->get();
 
             if ($data->isEmpty()) {
                 return response()->json(['message' => $this->messageMissing], 401);
