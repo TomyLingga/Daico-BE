@@ -6,32 +6,27 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 
-class MasterRetail extends Model
+class KapasitasWhPallet extends Model
 {
     use HasFactory, Notifiable;
 
     protected $primaryKey = 'id';
 
-    protected $table = 'master_retail';
+    protected $table = 'kapasitas_wh_pallet';
 
     protected $fillable = [
-        'name'
+        'location_id',
+        'tanggal',
+        'value'
     ];
-
-    protected $hidden = ['created_at', 'updated_at'];
 
     public function logs()
     {
         return $this->morphMany(Log::class, 'model');
     }
 
-    public function product()
+    public function location()
     {
-        return $this->morphOne(MasterProduct::class, 'productable');
-    }
-
-    public function stokRetail()
-    {
-        return $this->morphOne(StokRetail::class, 'productable');
+        return $this->belongsTo(Location::class, 'location_id');
     }
 }

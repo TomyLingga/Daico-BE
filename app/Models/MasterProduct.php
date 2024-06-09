@@ -46,4 +46,9 @@ class MasterProduct extends Model
     {
         return $this->morphOne(StokBulky::class, 'productable');
     }
+
+    public function stokRetail()
+    {
+        return $this->morphOne(StokRetail::class, 'productable');
+    }
 }

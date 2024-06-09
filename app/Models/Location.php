@@ -29,4 +29,9 @@ class Location extends Model
     {
         return $this->hasMany(Tank::class, 'location_id');
     }
+
+    public function stokRetail()
+    {
+        return $this->hasMany(StokRetail::class, 'location_id');
+    }
 }

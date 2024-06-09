@@ -3,18 +3,19 @@
 namespace App\Http\Controllers\Api\Stock;
 
 use App\Http\Controllers\Controller;
-use App\Models\MasterBulky;
+use App\Models\Location;
 use App\Models\MasterProduct;
+use App\Models\MasterRetail;
 use App\Models\MasterSubProduct;
-use App\Models\StokBulky;
-use App\Models\Tank;
+use App\Models\Setting;
+use App\Models\StokRetail;
 use App\Services\LoggerService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
-class StokBulkyController extends Controller
+class StokRetailController extends Controller
 {
     private $messageFail = 'Something went wrong';
     private $messageMissing = 'Data not found in record';
@@ -30,13 +31,10 @@ class StokBulkyController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'tanggal' => 'required|date',
-                'tank_id' => 'required|exists:' . Tank::class . ',id',
+                'location_id' => 'required|exists:' . Location::class . ',id',
                 'productable_id' => 'required|integer',
-                'product_type' => 'required|string|in:bulk,product,subproduct',
-                'stok_mt' => 'required|numeric',
-                'stok_exc_btm_mt' => 'required|numeric',
-                'umur' => 'required|numeric',
-                'remarks' => 'required',
+                'product_type' => 'required|string|in:retail,product,subproduct',
+                'ctn' => 'required|numeric'
             ]);
 
             if ($validator->fails()) {
@@ -46,20 +44,10 @@ class StokBulkyController extends Controller
                 ], 400);
             }
 
-            $existingEntry = StokBulky::where('tanggal', $request->tanggal)
-                                  ->where('tank_id', $request->tank_id)
-                                  ->first();
-            if ($existingEntry) {
-                return response()->json([
-                    'message' => 'An entry for this tank on the given date already exists.',
-                    'success' => false,
-                ], 400);
-            }
-
             $productableType = null;
-            if ($request->product_type === 'bulk') {
-                MasterBulky::findOrFail($request->productable_id);
-                $productableType = MasterBulky::class;
+            if ($request->product_type === 'retail') {
+                MasterRetail::findOrFail($request->productable_id);
+                $productableType = MasterRetail::class;
             } else if ($request->product_type === 'product') {
                 MasterProduct::findOrFail($request->productable_id);
                 $productableType = MasterProduct::class;
@@ -68,15 +56,24 @@ class StokBulkyController extends Controller
                 $productableType = MasterSubProduct::class;
             }
 
-            $real = new StokBulky();
+            $existingEntry = StokRetail::where('tanggal', $request->tanggal)
+                                  ->where('location_id', $request->location_id)
+                                  ->where('productable_id', $request->location_id)
+                                  ->where('product_type', $productableType)
+                                  ->first();
+            if ($existingEntry) {
+                return response()->json([
+                    'message' => 'An entry for this location with product and on the given date already exists.',
+                    'success' => false,
+                ], 400);
+            }
+
+            $real = new StokRetail();
             $real->tanggal = $request->tanggal;
-            $real->tank_id = $request->tank_id;
+            $real->location_id = $request->location_id;
             $real->productable_id = $request->productable_id;
             $real->productable_type = $productableType;
-            $real->stok_mt = $request->stok_mt;
-            $real->stok_exc_btm_mt = $request->stok_exc_btm_mt;
-            $real->umur = $request->umur;
-            $real->remarks = $request->remarks;
+            $real->ctn = $request->ctn;
 
             $real->save();
 
@@ -107,13 +104,10 @@ class StokBulkyController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'tanggal' => 'required|date',
-                'tank_id' => 'required|exists:' . Tank::class . ',id',
+                'location_id' => 'required|exists:' . Location::class . ',id',
                 'productable_id' => 'required|integer',
-                'product_type' => 'required|string|in:bulk,product,subproduct',
-                'stok_mt' => 'required|numeric',
-                'stok_exc_btm_mt' => 'required|numeric',
-                'umur' => 'required|numeric',
-                'remarks' => 'required',
+                'product_type' => 'required|string|in:retail,product,subproduct',
+                'ctn' => 'required|numeric'
             ]);
 
             if ($validator->fails()) {
@@ -123,21 +117,10 @@ class StokBulkyController extends Controller
                 ], 400);
             }
 
-            $existingEntry = StokBulky::where('tanggal', $request->tanggal)
-                                  ->where('tank_id', $request->tank_id)
-                                  ->where('id', '!=', $id)
-                                  ->first();
-            if ($existingEntry) {
-                return response()->json([
-                    'message' => 'An entry for this tank on the given date already exists.',
-                    'success' => false,
-                ], 400);
-            }
-
             $productableType = null;
             if ($request->product_type === 'bulk') {
-                MasterBulky::findOrFail($request->productable_id);
-                $productableType = MasterBulky::class;
+                MasterRetail::findOrFail($request->productable_id);
+                $productableType = MasterRetail::class;
             } else if ($request->product_type === 'product') {
                 MasterProduct::findOrFail($request->productable_id);
                 $productableType = MasterProduct::class;
@@ -146,18 +129,27 @@ class StokBulkyController extends Controller
                 $productableType = MasterSubProduct::class;
             }
 
-            $data = StokBulky::findOrFail($id);
+            $existingEntry = StokRetail::where('tanggal', $request->tanggal)
+                                  ->where('location_id', $request->location_id)
+                                  ->where('productable_id', $request->location_id)
+                                  ->where('product_type', $productableType)
+                                  ->where('id', '!=', $id)
+                                  ->first();
+            if ($existingEntry) {
+                return response()->json([
+                    'message' => 'An entry for this location with product and on the given date already exists.',
+                    'success' => false,
+                ], 400);
+            }
+
+            $data = StokRetail::findOrFail($id);
             $oldData = $data->toArray();
 
-
             $data->tanggal = $request->tanggal;
-            $data->tank_id = $request->tank_id;
+            $data->location_id = $request->location_id;
             $data->productable_id = $request->productable_id;
             $data->productable_type = $productableType;
-            $data->stok_mt = $request->stok_mt;
-            $data->stok_exc_btm_mt = $request->stok_exc_btm_mt;
-            $data->umur = $request->umur;
-            $data->remarks = $request->remarks;
+            $data->ctn = $request->ctn;
             $data->save();
 
             LoggerService::logAction($this->userData, $data, 'update', $oldData, $data->toArray());
@@ -186,7 +178,7 @@ class StokBulkyController extends Controller
         try {
             $tanggal = $request->tanggal;
 
-            $data = StokBulky::with('productable','tank')
+            $data = StokRetail::with('productable','tank')
                 ->whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
                 ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
                 ->get();
@@ -201,7 +193,25 @@ class StokBulkyController extends Controller
                 return response()->json(['message' => $this->messageMissing], 401);
             }
 
-            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+            $settingNames = ['pembagi_pallet_stok_retail',
+                            'pengali_kapasitas_wh_ctn',
+                            'pengali_kapasitas_wh_mt',
+                            'pengali_mt_stok_retail',
+                            'pembagi_mt_stok_retail',
+                            'ctn_mt_250ml',
+                            'ctn_mt_450ml',
+                            'ctn_mt_900ml',
+                            'ctn_mt_1800ml',
+                            'ctn_mt_1l',
+                            'ctn_mt_2l',
+                            ];
+            $settings = Setting::whereIn('setting_name', $settingNames)->get();
+
+            if ($settings->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            return response()->json(['data' => $data, 'settings' => $settings,'message' => $this->messageAll], 200);
         } catch (QueryException $e) {
             return response()->json([
                 'message' => $this->messageFail,
@@ -216,7 +226,7 @@ class StokBulkyController extends Controller
     {
         try {
 
-            $data = StokBulky::with('productable','tank')
+            $data = StokRetail::with('productable','tank')
                 ->where('tanggal', $request->tanggal)
                 ->get();
 
@@ -230,7 +240,25 @@ class StokBulkyController extends Controller
                 return response()->json(['message' => $this->messageMissing], 401);
             }
 
-            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+            $settingNames = ['pembagi_pallet_stok_retail',
+                            'pengali_kapasitas_wh_ctn',
+                            'pengali_kapasitas_wh_mt',
+                            'pengali_mt_stok_retail',
+                            'pembagi_mt_stok_retail',
+                            'ctn_mt_250ml',
+                            'ctn_mt_450ml',
+                            'ctn_mt_900ml',
+                            'ctn_mt_1800ml',
+                            'ctn_mt_1l',
+                            'ctn_mt_2l',
+                            ];
+            $settings = Setting::whereIn('setting_name', $settingNames)->get();
+
+            if ($settings->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            return response()->json(['data' => $data, 'settings' => $settings, 'message' => $this->messageAll], 200);
         } catch (QueryException $e) {
             return response()->json([
                 'message' => $this->messageFail,
@@ -244,7 +272,7 @@ class StokBulkyController extends Controller
     public function index()
     {
         try {
-            $data = StokBulky::with('productable','tank')->get();
+            $data = StokRetail::with('productable','tank')->get();
 
             $data->each(function ($item) {
                 $item->makeHidden('productable');
@@ -256,43 +284,25 @@ class StokBulkyController extends Controller
                 return response()->json(['message' => $this->messageMissing], 401);
             }
 
-            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
-        } catch (QueryException $e) {
-            return response()->json([
-                'message' => $this->messageFail,
-                'err' => $e->getTrace()[0],
-                'errMsg' => $e->getMessage(),
-                'success' => false,
-            ], 500);
-        }
-    }
+            $settingNames = ['pembagi_pallet_stok_retail',
+                            'pengali_kapasitas_wh_ctn',
+                            'pengali_kapasitas_wh_mt',
+                            'pengali_mt_stok_retail',
+                            'pembagi_mt_stok_retail',
+                            'ctn_mt_250ml',
+                            'ctn_mt_450ml',
+                            'ctn_mt_900ml',
+                            'ctn_mt_1800ml',
+                            'ctn_mt_1l',
+                            'ctn_mt_2l',
+                            ];
+            $settings = Setting::whereIn('setting_name', $settingNames)->get();
 
-    public function indexLatest()
-    {
-        try {
-            // Subquery to get the latest tanggal for each tank
-            $subquery = StokBulky::select('tank_id', DB::raw('MAX(tanggal) as max_tanggal'))
-                ->groupBy('tank_id');
-
-            // Join the subquery to get the latest entries
-            $data = StokBulky::with('productable', 'tank')
-                ->joinSub($subquery, 'latest_entries', function($join) {
-                    $join->on('stok_bulky.tank_id', '=', 'latest_entries.tank_id')
-                        ->on('stok_bulky.tanggal', '=', 'latest_entries.max_tanggal');
-                })
-                ->get();
-
-            $data->each(function ($item) {
-                $item->makeHidden('productable');
-                $item->extended_productable;
-                $item->space = $item->tank->capacity - $item->stok_mt;
-            });
-
-            if ($data->isEmpty()) {
+            if ($settings->isEmpty()) {
                 return response()->json(['message' => $this->messageMissing], 401);
             }
 
-            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+            return response()->json(['data' => $data, 'settings' => $settings, 'message' => $this->messageAll], 200);
         } catch (QueryException $e) {
             return response()->json([
                 'message' => $this->messageFail,
@@ -306,14 +316,32 @@ class StokBulkyController extends Controller
     public function show($id)
     {
         try {
-            $data = StokBulky::with('productable','tank')
+            $data = StokRetail::with('productable','tank')
                                 ->findOrFail($id);
             $data->makeHidden('productable');
             $data->extended_productable;
             $data->space = $data->tank->capacity - $data->stok_mt;
 
+            $settingNames = ['pembagi_pallet_stok_retail',
+                            'pengali_kapasitas_wh_ctn',
+                            'pengali_kapasitas_wh_mt',
+                            'pengali_mt_stok_retail',
+                            'pembagi_mt_stok_retail',
+                            'ctn_mt_250ml',
+                            'ctn_mt_450ml',
+                            'ctn_mt_900ml',
+                            'ctn_mt_1800ml',
+                            'ctn_mt_1l',
+                            'ctn_mt_2l',
+                            ];
+            $settings = Setting::whereIn('setting_name', $settingNames)->get();
+
+            if ($settings->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
             return response()->json([
                 'data' => $data,
+                'settings' => $settings,
                 'message' => $this->messageSuccess,
                 'code' => 200
             ], 200);

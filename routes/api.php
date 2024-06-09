@@ -160,6 +160,19 @@ Route::get('stock-bulky', [App\Http\Controllers\Api\Stock\StokBulkyController::c
 Route::get('stock-bulky/get/{id}', [App\Http\Controllers\Api\Stock\StokBulkyController::class, 'show']);
 Route::post('stock-bulky/date', [App\Http\Controllers\Api\Stock\StokBulkyController::class, 'indexDate']);
 Route::post('stock-bulky/period', [App\Http\Controllers\Api\Stock\StokBulkyController::class, 'indexPeriod']);
+Route::get('stock-bulky/latest', [App\Http\Controllers\Api\Stock\StokBulkyController::class, 'indexLatest']);
+//Kapasitas WH Pallet
+Route::get('kapasitas-wh-pallet', [App\Http\Controllers\Api\Stock\KapasitasWHPalletController::class, 'index']);
+Route::get('kapasitas-wh-pallet/get/{id}', [App\Http\Controllers\Api\Stock\KapasitasWHPalletController::class, 'show']);
+Route::post('kapasitas-wh-pallet/date', [App\Http\Controllers\Api\Stock\KapasitasWHPalletController::class, 'indexDate']);
+Route::post('kapasitas-wh-pallet/period', [App\Http\Controllers\Api\Stock\KapasitasWHPalletController::class, 'indexPeriod']);
+Route::get('kapasitas-wh-pallet/latest', [App\Http\Controllers\Api\Stock\KapasitasWHPalletController::class, 'indexLatest']);
+//StockRetail
+Route::get('stock-retail', [App\Http\Controllers\Api\Stock\StokRetailController::class, 'index']);
+Route::get('stock-retail/get/{id}', [App\Http\Controllers\Api\Stock\StokRetailController::class, 'show']);
+Route::post('stock-retail/date', [App\Http\Controllers\Api\Stock\StokRetailController::class, 'indexDate']);
+Route::post('stock-retail/period', [App\Http\Controllers\Api\Stock\StokRetailController::class, 'indexPeriod']);
+Route::get('stock-retail/latest', [App\Http\Controllers\Api\Stock\StokRetailController::class, 'indexLatest']);
 
 Route::group(['middleware' => 'levelone.checker'], function () {
     //Kategori Uraian Produksi
@@ -255,6 +268,12 @@ Route::group(['middleware' => 'levelnine.checker'], function () {
     //StokBulky
     Route::post('stock-bulky/add', [App\Http\Controllers\Api\Stock\StokBulkyController::class, 'store']);
     Route::post('stock-bulky/update/{id}', [App\Http\Controllers\Api\Stock\StokBulkyController::class, 'update']);
+    //Kapasitas WH Pallet
+    Route::post('kapasitas-wh-pallet/add', [App\Http\Controllers\Api\Stock\KapasitasWHPalletController::class, 'store']);
+    Route::post('kapasitas-wh-pallet/update/{id}', [App\Http\Controllers\Api\Stock\KapasitasWHPalletController::class, 'update']);
+    //StokRetail
+    Route::post('stock-retail/add', [App\Http\Controllers\Api\Stock\StokRetailController::class, 'store']);
+    Route::post('stock-retail/update/{id}', [App\Http\Controllers\Api\Stock\StokRetailController::class, 'update']);
 });
 
 Route::group(['middleware' => 'levelseven.checker'], function () {
