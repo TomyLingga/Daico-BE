@@ -18,6 +18,7 @@ class outstandingCpo extends Model
         'kontrak',
         'supplier',
         'qty',
+        'qty_out',
         'harga',
     ];
 

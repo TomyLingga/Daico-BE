@@ -17,6 +17,7 @@ class actualIncomingCpo extends Model
     protected $fillable = [
         'tanggal',
         'qty',
+        'qty_out',
         'harga',
     ];
 
