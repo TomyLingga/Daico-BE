@@ -178,7 +178,7 @@ class StokRetailController extends Controller
         try {
             $tanggal = $request->tanggal;
 
-            $data = StokRetail::with('productable','tank')
+            $data = StokRetail::with('productable','location')
                 ->whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
                 ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
                 ->get();
@@ -186,7 +186,6 @@ class StokRetailController extends Controller
             $data->each(function ($item) {
                 $item->makeHidden('productable');
                 $item->extended_productable;
-                $item->space = $item->tank->capacity - $item->stok_mt;
             });
 
             if ($data->isEmpty()) {
@@ -226,14 +225,13 @@ class StokRetailController extends Controller
     {
         try {
 
-            $data = StokRetail::with('productable','tank')
+            $data = StokRetail::with('productable','location')
                 ->where('tanggal', $request->tanggal)
                 ->get();
 
             $data->each(function ($item) {
                 $item->makeHidden('productable');
                 $item->extended_productable;
-                $item->space = $item->tank->capacity - $item->stok_mt;
             });
 
             if ($data->isEmpty()) {
@@ -269,15 +267,49 @@ class StokRetailController extends Controller
         }
     }
 
-    public function index()
+    public function indexLatest()
     {
         try {
-            $data = StokRetail::with('productable','tank')->get();
+            // Subquery to get the latest tanggal for each tank
+            $subquery = StokRetail::select('location_id', DB::raw('MAX(tanggal) as max_tanggal'))
+                ->groupBy('location_id');
+
+            // Join the subquery to get the latest entries
+            $data = StokRetail::with('productable', 'location')
+                ->joinSub($subquery, 'latest_entries', function($join) {
+                    $join->on('stok_bulky.location', '=', 'latest_entries.location')
+                        ->on('stok_bulky.tanggal', '=', 'latest_entries.max_tanggal');
+                })
+                ->get();
 
             $data->each(function ($item) {
                 $item->makeHidden('productable');
                 $item->extended_productable;
-                $item->space = $item->tank->capacity - $item->stok_mt;
+            });
+
+            if ($data->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+        } catch (QueryException $e) {
+            return response()->json([
+                'message' => $this->messageFail,
+                'err' => $e->getTrace()[0],
+                'errMsg' => $e->getMessage(),
+                'success' => false,
+            ], 500);
+        }
+    }
+
+    public function index()
+    {
+        try {
+            $data = StokRetail::with('productable','location')->get();
+
+            $data->each(function ($item) {
+                $item->makeHidden('productable');
+                $item->extended_productable;
             });
 
             if ($data->isEmpty()) {
@@ -316,7 +348,7 @@ class StokRetailController extends Controller
     public function show($id)
     {
         try {
-            $data = StokRetail::with('productable','tank')
+            $data = StokRetail::with('productable','location')
                                 ->findOrFail($id);
             $data->makeHidden('productable');
             $data->extended_productable;
