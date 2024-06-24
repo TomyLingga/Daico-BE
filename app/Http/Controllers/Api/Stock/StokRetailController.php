@@ -33,7 +33,7 @@ class StokRetailController extends Controller
                 'tanggal' => 'required|date',
                 'location_id' => 'required|exists:' . Location::class . ',id',
                 'productable_id' => 'required|integer',
-                'product_type' => 'required|string|in:retail,product,subproduct',
+                'productable_type' => 'required|string|in:retail,product,subproduct',
                 'ctn' => 'required|numeric'
             ]);
 
@@ -45,13 +45,13 @@ class StokRetailController extends Controller
             }
 
             $productableType = null;
-            if ($request->product_type === 'retail') {
+            if ($request->productable_type === 'retail') {
                 MasterRetail::findOrFail($request->productable_id);
                 $productableType = MasterRetail::class;
-            } else if ($request->product_type === 'product') {
+            } else if ($request->productable_type === 'product') {
                 MasterProduct::findOrFail($request->productable_id);
                 $productableType = MasterProduct::class;
-            } else if ($request->product_type === 'subproduct') {
+            } else if ($request->productable_type === 'subproduct') {
                 MasterSubProduct::findOrFail($request->productable_id);
                 $productableType = MasterSubProduct::class;
             }
@@ -59,7 +59,7 @@ class StokRetailController extends Controller
             $existingEntry = StokRetail::where('tanggal', $request->tanggal)
                                   ->where('location_id', $request->location_id)
                                   ->where('productable_id', $request->location_id)
-                                  ->where('product_type', $productableType)
+                                  ->where('productable_type', $productableType)
                                   ->first();
             if ($existingEntry) {
                 return response()->json([
@@ -106,7 +106,7 @@ class StokRetailController extends Controller
                 'tanggal' => 'required|date',
                 'location_id' => 'required|exists:' . Location::class . ',id',
                 'productable_id' => 'required|integer',
-                'product_type' => 'required|string|in:retail,product,subproduct',
+                'productable_type' => 'required|string|in:retail,product,subproduct',
                 'ctn' => 'required|numeric'
             ]);
 
@@ -118,13 +118,13 @@ class StokRetailController extends Controller
             }
 
             $productableType = null;
-            if ($request->product_type === 'bulk') {
+            if ($request->productable_type === 'bulk') {
                 MasterRetail::findOrFail($request->productable_id);
                 $productableType = MasterRetail::class;
-            } else if ($request->product_type === 'product') {
+            } else if ($request->productable_type === 'product') {
                 MasterProduct::findOrFail($request->productable_id);
                 $productableType = MasterProduct::class;
-            } else if ($request->product_type === 'subproduct') {
+            } else if ($request->productable_type === 'subproduct') {
                 MasterSubProduct::findOrFail($request->productable_id);
                 $productableType = MasterSubProduct::class;
             }
@@ -132,7 +132,7 @@ class StokRetailController extends Controller
             $existingEntry = StokRetail::where('tanggal', $request->tanggal)
                                   ->where('location_id', $request->location_id)
                                   ->where('productable_id', $request->location_id)
-                                  ->where('product_type', $productableType)
+                                  ->where('productable_type', $productableType)
                                   ->where('id', '!=', $id)
                                   ->first();
             if ($existingEntry) {

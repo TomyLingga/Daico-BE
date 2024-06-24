@@ -32,7 +32,7 @@ class StokBulkyController extends Controller
                 'tanggal' => 'required|date',
                 'tank_id' => 'required|exists:' . Tank::class . ',id',
                 'productable_id' => 'required|integer',
-                'product_type' => 'required|string|in:bulk,product,subproduct',
+                'productable_type' => 'required|string|in:bulk,product,subproduct',
                 'stok_mt' => 'required|numeric',
                 'stok_exc_btm_mt' => 'required|numeric',
                 'umur' => 'required|numeric',
@@ -57,13 +57,13 @@ class StokBulkyController extends Controller
             }
 
             $productableType = null;
-            if ($request->product_type === 'bulk') {
+            if ($request->productable_type === 'bulk') {
                 MasterBulky::findOrFail($request->productable_id);
                 $productableType = MasterBulky::class;
-            } else if ($request->product_type === 'product') {
+            } else if ($request->productable_type === 'product') {
                 MasterProduct::findOrFail($request->productable_id);
                 $productableType = MasterProduct::class;
-            } else if ($request->product_type === 'subproduct') {
+            } else if ($request->productable_type === 'subproduct') {
                 MasterSubProduct::findOrFail($request->productable_id);
                 $productableType = MasterSubProduct::class;
             }
@@ -109,7 +109,7 @@ class StokBulkyController extends Controller
                 'tanggal' => 'required|date',
                 'tank_id' => 'required|exists:' . Tank::class . ',id',
                 'productable_id' => 'required|integer',
-                'product_type' => 'required|string|in:bulk,product,subproduct',
+                'productable_type' => 'required|string|in:bulk,product,subproduct',
                 'stok_mt' => 'required|numeric',
                 'stok_exc_btm_mt' => 'required|numeric',
                 'umur' => 'required|numeric',
@@ -135,13 +135,13 @@ class StokBulkyController extends Controller
             }
 
             $productableType = null;
-            if ($request->product_type === 'bulk') {
+            if ($request->productable_type === 'bulk') {
                 MasterBulky::findOrFail($request->productable_id);
                 $productableType = MasterBulky::class;
-            } else if ($request->product_type === 'product') {
+            } else if ($request->productable_type === 'product') {
                 MasterProduct::findOrFail($request->productable_id);
                 $productableType = MasterProduct::class;
-            } else if ($request->product_type === 'subproduct') {
+            } else if ($request->productable_type === 'subproduct') {
                 MasterSubProduct::findOrFail($request->productable_id);
                 $productableType = MasterSubProduct::class;
             }
