@@ -352,7 +352,6 @@ class StokRetailController extends Controller
                                 ->findOrFail($id);
             $data->makeHidden('productable');
             $data->extended_productable;
-            $data->space = $data->tank->capacity - $data->stok_mt;
 
             $settingNames = ['pembagi_pallet_stok_retail',
                             'pengali_kapasitas_wh_ctn',
