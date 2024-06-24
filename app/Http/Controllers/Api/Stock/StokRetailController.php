@@ -277,8 +277,8 @@ class StokRetailController extends Controller
             // Join the subquery to get the latest entries
             $data = StokRetail::with('productable', 'location')
                 ->joinSub($subquery, 'latest_entries', function($join) {
-                    $join->on('stok_bulky.location', '=', 'latest_entries.location')
-                        ->on('stok_bulky.tanggal', '=', 'latest_entries.max_tanggal');
+                    $join->on('stok_retail.location_id', '=', 'latest_entries.location_id')
+                        ->on('stok_retail.tanggal', '=', 'latest_entries.max_tanggal');
                 })
                 ->get();
 
