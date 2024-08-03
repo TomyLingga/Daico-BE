@@ -312,6 +312,9 @@ class StokBulkyController extends Controller
             $data->extended_productable;
             $data->space = $data->tank->capacity - $data->stok_mt;
 
+            $data['history'] = $this->formatLogs($data->logs);
+            unset($data->logs);
+
             return response()->json([
                 'data' => $data,
                 'message' => $this->messageSuccess,

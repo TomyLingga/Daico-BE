@@ -129,8 +129,8 @@ class MonthlyDmoController extends Controller
         try {
             $data = MonthlyDMO::findOrFail($id);
 
-            // $data['history'] = $this->formatLogs($data->logs);
-            // unset($data->logs);
+            $data['history'] = $this->formatLogs($data->logs);
+            unset($data->logs);
 
             return response()->json([
                 'data' => $data,

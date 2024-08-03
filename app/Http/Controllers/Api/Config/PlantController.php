@@ -44,8 +44,8 @@ class PlantController extends Controller
         try {
             $Plant = Plant::findOrFail($id);
 
-            // $Plant->history = $this->formatLogs($Plant->logs);
-            // unset($Plant->logs);
+            $Plant->history = $this->formatLogs($Plant->logs);
+            unset($Plant->logs);
 
             return response()->json([
                 'Plant' => $Plant,

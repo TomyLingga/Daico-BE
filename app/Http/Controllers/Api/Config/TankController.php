@@ -73,8 +73,8 @@ class TankController extends Controller
     {
         try {
             $data = Tank::with('location')->findOrFail($id);
-            // $data->history = $this->formatLogs($data->logs);
-            // unset($data->logs);
+            $data->history = $this->formatLogs($data->logs);
+            unset($data->logs);
 
             return response()->json([
                 'data' => $data,

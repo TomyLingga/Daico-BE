@@ -130,8 +130,8 @@ class KursMandiriController extends Controller
         try {
             $data = KursMandiri::findOrFail($id);
 
-            // $data->history = $this->formatLogs($data->logs);
-            // unset($data->logs);
+            $data->history = $this->formatLogs($data->logs);
+            unset($data->logs);
 
             return response()->json([
                 'data' => $data,

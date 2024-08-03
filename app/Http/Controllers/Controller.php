@@ -19,11 +19,12 @@ class Controller extends BaseController
     public $urlAllDept;
     public $urlUser;
     public $urlAllUser;
-    public $urlGeneralLedger;
-    public $urlGeneralLedgerCoa;
+    // public $urlGeneralLedger;
+    public $urlGeneralLedgerPosted;
     public $urlGeneralLedgerCoaPosted;
-    // public $urlCurrency;
+    public $urlCurrency;
     public $urlCurrencyGet;
+    public $urlRateCurrency;
 
     public function __construct()
     {
@@ -34,11 +35,12 @@ class Controller extends BaseController
             $this->urlAllDept = env('BASE_URL_PORTAL')."department";
             $this->urlUser = env('BASE_URL_PORTAL')."user/get/";
             $this->urlAllUser = env('BASE_URL_PORTAL')."user";
-            $this->urlGeneralLedger = env('BASE_URL_ODOO')."account_move_line/index";
-            $this->urlGeneralLedgerCoa = env('BASE_URL_ODOO')."account_move_line/coa";
-            $this->urlGeneralLedgerCoaPosted = env('BASE_URL_ODOO')."account_move_line/posted";
-            // $this->urlCurrency = env('BASE_URL_ODOO')."currency/index";
+            // $this->urlGeneralLedger = env('BASE_URL_ODOO')."account_move_line/index";
+            $this->urlGeneralLedgerPosted = env('BASE_URL_ODOO')."account_move_line/posted";
+            $this->urlGeneralLedgerCoaPosted = env('BASE_URL_ODOO')."account_move_line/coa";
+            $this->urlCurrency = env('BASE_URL_ODOO')."currency/index";
             $this->urlCurrencyGet = env('BASE_URL_ODOO')."currency/get/";
+            $this->urlRateCurrency = env('BASE_URL_ODOO')."currency_rate/period";
             return $next($request);
         });
     }
@@ -50,18 +52,28 @@ class Controller extends BaseController
         ])->get($this->urlCurrencyGet. $id)->json()['data'] ?? [];
     }
 
-    // public function getCurrencies()
-    // {
-    //     return Http::withHeaders([
-    //         'Authorization' => $this->token,
-    //     ])->get($this->urlCurrency)->json()['data'] ?? [];
-    // }
+    public function getCurrencies()
+    {
+        return Http::withHeaders([
+            'Authorization' => $this->token,
+        ])->get($this->urlCurrency)->json()['data'] ?? [];
+    }
+
+    public function geturlRateCurrencyData($tanggal, $mata_uang)
+    {
+        return Http::withHeaders([
+            'Authorization' => $this->token,
+        ])->post($this->urlRateCurrency, [
+            'tanggal' => $tanggal,
+            'mata_uang' => $mata_uang,
+        ])->json()['data'] ?? [];
+    }
 
     public function getGeneralLedgerData($tanggal)
     {
         return Http::withHeaders([
             'Authorization' => $this->token,
-        ])->post($this->urlGeneralLedger, [
+        ])->post($this->urlGeneralLedgerPosted, [
             'tanggal' => $tanggal
         ])->json()['data'] ?? [];
     }
@@ -70,7 +82,7 @@ class Controller extends BaseController
     {
         $response = Http::withHeaders([
             'Authorization' => $this->token,
-        ])->post($this->urlGeneralLedgerCoa, [
+        ])->post($this->urlGeneralLedgerCoaPosted, [
             'tanggal' => $tanggal,
             'coa' => $coa
         ])->json();

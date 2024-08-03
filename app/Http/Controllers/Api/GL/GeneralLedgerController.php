@@ -13,29 +13,27 @@ class GeneralLedgerController extends Controller
     {
         $tanggal = $request->get('tanggal');
         $date = Carbon::parse($tanggal);
-        $debe = Debe::with('cat3', 'mReport', 'cCentre', 'plant', 'allocation')->get();
-        $coa = Debe::pluck('coa');
+
+        // Fetch only necessary fields
+        $coa = Debe::pluck('coa')->toArray();
+        $debe = Debe::with(['cat3', 'mReport', 'cCentre', 'plant', 'allocation'])->whereIn('coa', $coa)->get()->keyBy('coa');
+
         $glData = $this->getGeneralLedgerData($date);
-        $glDataCollection = collect($glData);
-
-        $filteredGlData = $glDataCollection->filter(function ($item) use ($coa) {
-            return in_array($item['account_account']['code'], $coa->toArray());
+        $filteredGlData = collect($glData)->filter(function ($item) use ($coa) {
+            return in_array($item['account_account']['code'], $coa);
         });
 
-        $totalDebit = $filteredGlData->sum(function ($item) {
-            return $item['debit'];
-        });
+        $totals = $filteredGlData->reduce(function ($carry, $item) {
+            $carry['totalDebit'] += $item['debit'];
+            $carry['totalCredit'] += $item['credit'];
+            return $carry;
+        }, ['totalDebit' => 0, 'totalCredit' => 0]);
 
-        $totalCredit = $filteredGlData->sum(function ($item) {
-            return $item['credit'];
-        });
-
-        $totalDifference = $totalDebit - $totalCredit;
+        $totalDifference = $totals['totalDebit'] - $totals['totalCredit'];
 
         $filteredGlData->transform(function ($item) use ($debe) {
             $coaCode = $item['account_account']['code'];
-            $debeModel = $debe->firstWhere('coa', $coaCode);
-            $item['debe'] = $debeModel;
+            $item['debe'] = $debe->get($coaCode);
             return $item;
         });
 
@@ -48,8 +46,8 @@ class GeneralLedgerController extends Controller
         }
 
         return response()->json([
-            'totalDebit' => $totalDebit,
-            'totalCredit' => $totalCredit,
+            'totalDebit' => $totals['totalDebit'],
+            'totalCredit' => $totals['totalCredit'],
             'totalDifference' => $totalDifference,
             'data' => $filteredGlData->values(),
             'message' => 'Data Retrieved Successfully',
@@ -57,4 +55,5 @@ class GeneralLedgerController extends Controller
             'success' => true,
         ], 200);
     }
+
 }

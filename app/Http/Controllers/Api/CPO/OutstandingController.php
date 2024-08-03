@@ -98,8 +98,8 @@ class OutstandingController extends Controller
 
             $data['value'] = $data->qty * $data->harga;
 
-            // $data['history'] = $this->formatLogs($data->logs);
-            // unset($data->logs);
+            $data['history'] = $this->formatLogs($data->logs);
+            unset($data->logs);
 
             return response()->json([
                 'data' => $data,

@@ -43,8 +43,8 @@ class SettingController extends Controller
         try {
             $data = Setting::findOrFail($id);
 
-            // $data->history = $this->formatLogs($data->logs);
-            // unset($data->logs);
+            $data->history = $this->formatLogs($data->logs);
+            unset($data->logs);
 
             return response()->json([
                 'data' => $data,
@@ -133,7 +133,6 @@ class SettingController extends Controller
         DB::beginTransaction();
 
         try {
-
             $validator = Validator::make($request->all(), [
                 'setting_value' => 'required',
             ]);
@@ -141,7 +140,6 @@ class SettingController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'message' => $validator->errors(),
-                    // 'code' => 400,
                     'success' => false
                 ], 400);
             }
@@ -149,20 +147,17 @@ class SettingController extends Controller
             $setting = Setting::find($id);
 
             if (!$setting) {
-
                 return response()->json([
                     'message' => $this->messageMissing,
-                    'success' => true,
-                    // 'code' => 401
+                    'success' => false
                 ], 401);
             }
 
-            $dataToUpdate = [
-                'setting_name' => $request->filled('setting_name') ? $request->name : $setting->name,
-            ];
+            // Update only the setting_value
+            $setting->setting_value = $request->setting_value;
 
-            $oldData = $setting->toArray();
-            $setting->update($dataToUpdate);
+            $oldData = $setting->getOriginal(); // Get the original data before updating
+            $setting->save(); // Save the updated setting
 
             LoggerService::logAction($this->userData, $setting, 'update', $oldData, $setting->toArray());
 
@@ -171,7 +166,6 @@ class SettingController extends Controller
             return response()->json([
                 'data' => $setting,
                 'message' => $this->messageUpdate,
-                // 'code' => 200,
                 'success' => true
             ], 200);
 
@@ -181,9 +175,9 @@ class SettingController extends Controller
                 'message' => $this->messageFail,
                 'err' => $e->getTrace()[0],
                 'errMsg' => $e->getMessage(),
-                // 'code' => 500,
                 'success' => false
             ], 500);
         }
     }
+
 }

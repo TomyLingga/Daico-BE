@@ -151,8 +151,8 @@ class TargetRkapController extends Controller
             $data = TargetRKAP::with('productable')
                                 ->findOrFail($id);
 
-            // $data['history'] = $this->formatLogs($data->logs);
-            // unset($data->logs);
+            $data['history'] = $this->formatLogs($data->logs);
+            unset($data->logs);
 
 
             return response()->json([

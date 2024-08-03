@@ -43,8 +43,8 @@ class MasterRetailController extends Controller
         try {
             $data = MasterRetail::findOrFail($id);
 
-            // $data->history = $this->formatLogs($data->logs);
-            // unset($data->logs);
+            $data->history = $this->formatLogs($data->logs);
+            unset($data->logs);
 
             return response()->json([
                 'data' => $data,

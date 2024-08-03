@@ -120,9 +120,8 @@ class HargaSatuanProduksiController extends Controller
         try {
             $data = HargaSatuanProduksi::with('uraian')->findOrFail($id);
 
-            // $data['history'] = $this->formatLogs($data->logs);
-            // unset($data->logs);
-
+            $data['history'] = $this->formatLogs($data->logs);
+            unset($data->logs);
 
             return response()->json([
                 'data' => $data,

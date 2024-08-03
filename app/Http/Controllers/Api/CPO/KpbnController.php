@@ -109,8 +109,8 @@ class KpbnController extends Controller
         try {
             $data = cpoKpbn::findOrFail($id);
 
-            // $data->history = $this->formatLogs($data->logs);
-            // unset($data->logs);
+            $data->history = $this->formatLogs($data->logs);
+            unset($data->logs);
 
             return response()->json([
                 'data' => $data,

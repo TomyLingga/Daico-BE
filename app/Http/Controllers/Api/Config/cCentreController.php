@@ -44,8 +44,8 @@ class cCentreController extends Controller
         try {
             $cCenter = cCentre::findOrFail($id);
 
-            // $cCenter->history = $this->formatLogs($cCenter->logs);
-            // unset($cCenter->logs);
+            $cCenter->history = $this->formatLogs($cCenter->logs);
+            unset($cCenter->logs);
 
             return response()->json([
                 'cCenter' => $cCenter,

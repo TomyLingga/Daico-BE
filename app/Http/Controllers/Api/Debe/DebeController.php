@@ -48,8 +48,8 @@ class DebeController extends Controller
         try {
             $debe = Debe::with(['cat3.cat2.cat1', 'mReport', 'cCentre', 'plant', 'allocation'])->findOrFail($id);
 
-            // $debe->history = $this->formatLogs($debe->logs);
-            // unset($debe->logs);
+            $debe->history = $this->formatLogs($debe->logs);
+            unset($debe->logs);
 
             return response()->json([
                 'debe' => $debe,

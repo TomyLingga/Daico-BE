@@ -353,6 +353,9 @@ class StokRetailController extends Controller
             $data->makeHidden('productable');
             $data->extended_productable;
 
+            $data['history'] = $this->formatLogs($data->logs);
+            unset($data->logs);
+
             $settingNames = ['pembagi_pallet_stok_retail',
                             'pengali_kapasitas_wh_ctn',
                             'pengali_kapasitas_wh_mt',

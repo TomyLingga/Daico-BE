@@ -64,8 +64,8 @@ class Category1Controller extends Controller
                 ], 401);
             }
 
-            // $category1->history = $this->formatLogsForMultiple($category1->logs);
-            // unset($category1->logs);
+            $category1->history = $this->formatLogsForMultiple($category1->logs);
+            unset($category1->logs);
 
             return response()->json([
                 'data' => $category1,

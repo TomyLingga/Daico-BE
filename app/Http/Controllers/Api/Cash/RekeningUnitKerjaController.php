@@ -58,8 +58,8 @@ class RekeningUnitKerjaController extends Controller
                     $rekening->matauang = $matauang;
                 }
 
-            // $data->history = $this->formatLogs($data->logs);
-            // unset($data->logs);
+            $data->history = $this->formatLogs($data->logs);
+            unset($data->logs);
 
             return response()->json([
                 'data' => $data,

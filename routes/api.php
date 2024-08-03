@@ -111,7 +111,7 @@ Route::get('harga-satuan/latest', [App\Http\Controllers\Api\Config\HargaSatuanPr
 Route::get('kurs-mandiri', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'index']);
 Route::get('kurs-mandiri/get/{id}', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'show']);
 Route::post('kurs-mandiri/date', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'indexDate']);
-Route::get('kurs-mandiri/latest', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'indexDate']);
+Route::get('kurs-mandiri/latest', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'indexLatest']);
 
 //Jenis Rekening
 Route::get('jenis-rekening', [App\Http\Controllers\Api\Config\MasterJenisRekeningController::class, 'index']);
@@ -173,6 +173,10 @@ Route::get('stock-retail/get/{id}', [App\Http\Controllers\Api\Stock\StokRetailCo
 Route::post('stock-retail/date', [App\Http\Controllers\Api\Stock\StokRetailController::class, 'indexDate']);
 Route::post('stock-retail/period', [App\Http\Controllers\Api\Stock\StokRetailController::class, 'indexPeriod']);
 Route::get('stock-retail/latest', [App\Http\Controllers\Api\Stock\StokRetailController::class, 'indexLatest']);
+
+//Procost
+Route::post('market-value/date', [App\Http\Controllers\Api\ProCost\ProcostController::class, 'indexDate']);
+
 
 Route::group(['middleware' => 'levelone.checker'], function () {
     //Kategori Uraian Produksi

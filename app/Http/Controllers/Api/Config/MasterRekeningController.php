@@ -54,8 +54,8 @@ class MasterRekeningController extends Controller
             $data = MasterRekening::with(['jenis', 'tipe'])->findOrFail($id);
             $currency = $this->getCurrency($data->matauang_id);
             $data->matauang = $currency;
-            // $data->history = $this->formatLogs($data->logs);
-            // unset($data->logs);
+            $data->history = $this->formatLogs($data->logs);
+            unset($data->logs);
 
             return response()->json([
                 'data' => $data,
@@ -112,6 +112,7 @@ class MasterRekeningController extends Controller
                 'matauang_id' => $request->matauang_id, // Use the matauang_id from the request
                 'jenis_id' => $request->jenis_id,
                 'tipe_id' => $request->tipe_id, // This is optional and will be null if not provided
+                'keterangan' => $request->keterangan, // This is optional and will be null if not provided
             ]);
 
             LoggerService::logAction($this->userData, $data, 'create', null, $data->toArray());
@@ -146,7 +147,7 @@ class MasterRekeningController extends Controller
                 'nomor' => 'required|unique:master_rekening,nomor,' . $id,
                 'matauang_id' => 'required|integer',
                 'jenis_id' => 'required|exists:' . MasterJenisRekening::class . ',id',
-                'tipe_id' => 'required|exists:' . MasterTipeRekening::class . ',id',
+                'tipe_id' => 'nullable|exists:' . MasterTipeRekening::class . ',id',
                 'keterangan' => 'required',
             ];
 

@@ -83,8 +83,8 @@ class MasterTipeRekeningController extends Controller
         try {
             $data = MasterTipeRekening::findOrFail($id);
 
-            // $data->history = $this->formatLogs($data->logs);
-            // unset($data->logs);
+            $data->history = $this->formatLogs($data->logs);
+            unset($data->logs);
 
             return response()->json([
                 'data' => $data,

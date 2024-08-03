@@ -239,6 +239,9 @@ class KapasitasWHPalletController extends Controller
             $data = KapasitasWhPallet::with('location')
                                 ->findOrFail($id);
 
+            $data['history'] = $this->formatLogs($data->logs);
+            unset($data->logs);
+
             return response()->json([
                 'data' => $data,
                 'message' => $this->messageSuccess,

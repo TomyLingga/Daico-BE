@@ -49,6 +49,17 @@ class LaporanProduksiController extends Controller
 
             UraianProduksi::findOrFail($request->id_uraian);
 
+            $existingLaporan = LaporanProduksi::where('id_uraian', $request->id_uraian)
+                ->where('tanggal', $request->tanggal)
+                ->first();
+
+            if ($existingLaporan) {
+                return response()->json([
+                    'message' => 'A record with the same tanggal and id_uraian already exists.',
+                    'success' => false,
+                ], 409);
+            }
+
             $latestHargaSatuan = HargaSatuanProduksi::where('id_uraian_produksi', $request->id_uraian)
             ->orderBy('created_at', 'desc')
             ->first();
@@ -234,8 +245,8 @@ class LaporanProduksiController extends Controller
         try {
             $data = LaporanProduksi::with(['uraian.kategori', 'hargaSatuan' , 'plant'])->find($id);
 
-            // $data['history'] = $this->formatLogs($data->logs);
-            // unset($data->logs);
+            $data['history'] = $this->formatLogs($data->logs);
+            unset($data->logs);
 
             $data->finalValue = $data->value * $data->hargaSatuan->value;
 

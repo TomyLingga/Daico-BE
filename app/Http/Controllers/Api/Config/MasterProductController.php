@@ -117,8 +117,8 @@ class MasterProductController extends Controller
             $item = MasterProduct::with('productable','subProduct')
                                 ->findOrFail($id);
 
-            // $data['history'] = $this->formatLogs($data->logs);
-            // unset($data->logs);
+            $item['history'] = $this->formatLogs($item->logs);
+            unset($item->logs);
 
             $data = [
                 'id' => $item->id,

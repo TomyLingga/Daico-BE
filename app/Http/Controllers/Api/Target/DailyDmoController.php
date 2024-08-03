@@ -115,8 +115,8 @@ class DailyDmoController extends Controller
         try {
             $data = DailyDMO::findOrFail($id);
 
-            // $data['history'] = $this->formatLogs($data->logs);
-            // unset($data->logs);
+            $data['history'] = $this->formatLogs($data->logs);
+            unset($data->logs);
 
             return response()->json([
                 'data' => $data,

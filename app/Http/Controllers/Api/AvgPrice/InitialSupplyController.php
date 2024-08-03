@@ -163,6 +163,10 @@ class InitialSupplyController extends Controller
                                 ->findOrFail($id);
             $data->makeHidden('productable');
             $data->extended_productable;
+
+            $data->history = $this->formatLogs($data->logs);
+            unset($data->logs);
+
             return response()->json([
                 'data' => $data,
                 'message' => $this->messageSuccess,

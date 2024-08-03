@@ -63,8 +63,8 @@ class KategoriUraianProduksiController extends Controller
                 ], 401);
             }
 
-            // $kategoriUraian->history = $this->formatLogsForMultiple($kategoriUraian->logs);
-            // unset($kategoriUraian->logs);
+            $kategoriUraian->history = $this->formatLogsForMultiple($kategoriUraian->logs);
+            unset($kategoriUraian->logs);
 
             return response()->json([
                 'data' => $kategoriUraian,

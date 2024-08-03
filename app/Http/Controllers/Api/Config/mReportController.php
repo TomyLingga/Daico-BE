@@ -44,8 +44,8 @@ class mReportController extends Controller
         try {
             $mReport = mReport::findOrFail($id);
 
-            // $mReport->history = $this->formatLogs($mReport->logs);
-            // unset($mReport->logs);
+            $mReport->history = $this->formatLogs($mReport->logs);
+            unset($mReport->logs);
 
             return response()->json([
                 'mReport' => $mReport,
