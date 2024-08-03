@@ -9,7 +9,6 @@ use App\Models\MarketRoutersBulky;
 use App\Models\Setting;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class ProcostController extends Controller
 {

@@ -9,6 +9,7 @@ use App\Models\Plant;
 use App\Models\Setting;
 use App\Models\UraianProduksi;
 use App\Services\LoggerService;
+use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -163,13 +164,76 @@ class LaporanProduksiController extends Controller
         }
     }
 
+    protected function processLaporanProduksi($data)
+    {
+        $groupedData = $data->groupBy(function($item) {
+            return $item->uraian->kategori->id;
+        });
+
+        $laporanProduksi = [];
+
+        foreach ($groupedData as $kategoriId => $items) {
+            $kategoriName = $items->first()->uraian->kategori->nama;
+
+            $uraianGroups = $items->groupBy(function($item) {
+                return $item->uraian->id;
+            });
+
+            $uraianData = [];
+            foreach ($uraianGroups as $uraianId => $group) {
+                $uraianName = $group->first()->uraian->nama;
+                $totalQty = $group->sum('value');
+                $totalFinalValue = $group->sum(function($item) {
+                    return $item->value * $item->hargaSatuan->value;
+                });
+
+                $itemsData = $group->sortBy('tanggal')->map(function($item) {
+                    return [
+                        'id' => $item->id,
+                        'id_plant' => $item->id_plant,
+                        'id_uraian' => $item->id_uraian,
+                        'tanggal' => $item->tanggal,
+                        'value' => $item->value,
+                        'created_at' => $item->created_at,
+                        'updated_at' => $item->updated_at,
+                        'id_harga_satuan' => $item->id_harga_satuan,
+                        'harga_satuan' => $item->hargaSatuan,
+                        'plant' => $item->plant,
+                    ];
+                })->values();
+
+                $uraianData[] = [
+                    'id' => $uraianId,
+                    'id_category' => $group->first()->uraian->id_category,
+                    'nama' => $uraianName,
+                    'satuan' => $group->first()->uraian->satuan,
+                    'total_qty' => $totalQty,
+                    'total_final_value' => $totalFinalValue,
+                    'items' => $itemsData
+                ];
+            }
+
+            $uraianData = collect($uraianData)->sortBy('id')->values()->toArray();
+
+            $laporanProduksi[] = [
+                'id' => $kategoriId,
+                'nama' => $kategoriName,
+                'uraian' => $uraianData
+            ];
+        }
+
+        return $laporanProduksi;
+    }
+
     public function indexDate(Request $request)
     {
         try {
-            $tanggal = $request->tanggal;
+            $tanggal = Carbon::parse($request->tanggal);
+            $year = $tanggal->year;
+            $month = $tanggal->month;
 
-            $data = LaporanProduksi::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
-                ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
+            $data = LaporanProduksi::whereYear('tanggal', $year)
+                ->whereMonth('tanggal', $month)
                 ->with(['uraian.kategori', 'hargaSatuan', 'plant'])
                 ->get();
 
@@ -180,53 +244,58 @@ class LaporanProduksiController extends Controller
             $settingNames = ['konversi_liter_to_kg', 'pouch_to_box_1_liter', 'pouch_to_box_2_liter', 'konversi_m_liter_to_kg'];
             $settings = Setting::whereIn('setting_name', $settingNames)->get();
 
-            $groupedData = [];
-            foreach ($data as $item) {
-                $kategoriName = $item->uraian->kategori->nama;
-                $kategoriId = $item->uraian->kategori->id;
-                $uraianName = $item->uraian->nama;
+            $laporanProduksi = $this->processLaporanProduksi($data);
 
-                // Calculate finalValue
-                $item->finalValue = $item->value * $item->hargaSatuan->value;
+            return response()->json([
+                'laporanProduksi' => $laporanProduksi,
+                'setting' => $settings,
+                'message' => $this->messageAll
+            ], 200);
 
-                if (!isset($groupedData[$kategoriId])) {
-                    $groupedData[$kategoriId] = [
-                        'name' => $kategoriName,
-                        'items' => []
-                    ];
-                }
-                if (!isset($groupedData[$kategoriId]['items'][$uraianName])) {
-                    $groupedData[$kategoriId]['items'][$uraianName] = [
-                        'items' => [],
-                        'total_value' => 0,
-                        'total_finalValue' => 0
-                    ];
-                }
-                $groupedData[$kategoriId]['items'][$uraianName]['items'][] = $item;
-                $groupedData[$kategoriId]['items'][$uraianName]['total_value'] += $item->value;
-                $groupedData[$kategoriId]['items'][$uraianName]['total_finalValue'] += $item->finalValue;
+        } catch (QueryException $e) {
+            return response()->json([
+                'message' => $this->messageFail,
+                'err' => $e->getTrace()[0],
+                'errMsg' => $e->getMessage(),
+                'success' => false,
+            ], 500);
+        }
+    }
+    public function recapData(Request $request)
+    {
+        try {
+            $tanggal = Carbon::parse($request->tanggal);
+            $year = $tanggal->year;
+            $month = $tanggal->month;
+
+            $data = LaporanProduksi::whereYear('tanggal', $year)
+                ->whereMonth('tanggal', $month)
+                ->with(['uraian.kategori', 'hargaSatuan', 'plant'])
+                ->get();
+
+            if ($data->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
             }
 
-            ksort($groupedData);
+            $laporanProduksi = $this->processLaporanProduksi($data);
 
-            $finalData = [];
-            foreach ($groupedData as $kategoriData) {
-                $kategoriName = $kategoriData['name'];
-                $finalData[$kategoriName] = [];
-                foreach ($kategoriData['items'] as $uraian => $group) {
-                    $finalData[$kategoriName] = array_merge($finalData[$kategoriName], $group['items']);
-                    $totalQtyKey = 'total qty ' . $uraian;
-                    $totalFinalValueKey = 'total finalValue ' . $uraian;
-                    $finalData[$kategoriName][] = [
-                        $totalQtyKey => $group['total_value'],
-                        $totalFinalValueKey => $group['total_finalValue']
-                    ];
+            foreach ($laporanProduksi as &$kategori) {
+                foreach ($kategori['uraian'] as &$uraian) {
+                    $uraian['items'] = collect($uraian['items'])->groupBy('plant.id')->map(function($items, $plantId) {
+                        $totalQty = $items->sum('qty');
+                        $totalFinalValue = $items->sum('value');
+
+                        return [
+                            'qty' => $totalQty,
+                            'value' => $totalFinalValue,
+                            'plant' => $items->first()['plant']
+                        ];
+                    })->values()->toArray();
                 }
             }
 
             return response()->json([
-                'data' => $finalData,
-                'setting' => $settings,
+                'laporanProduksi' => $laporanProduksi,
                 'message' => $this->messageAll
             ], 200);
 

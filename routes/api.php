@@ -84,6 +84,7 @@ Route::get('uraian-produksi/get/{id}', [App\Http\Controllers\Api\Config\UraianPr
 Route::get('uraian-produksi/kategori/{id}', [App\Http\Controllers\Api\Config\UraianProduksiController::class, 'indexGrup']);
 //Laporan Produksi
 Route::post('laporan-produksi/date', [App\Http\Controllers\Api\DetAlloc\LaporanProduksiController::class, 'indexDate']);
+Route::post('laporan-produksi/recap', [App\Http\Controllers\Api\DetAlloc\LaporanProduksiController::class, 'recapData']);
 Route::get('laporan-produksi/get/{id}', [App\Http\Controllers\Api\DetAlloc\LaporanProduksiController::class, 'show']);
 //Daily DMO
 Route::get('daily-dmo', [App\Http\Controllers\Api\Target\DailyDmoController::class, 'index']);
