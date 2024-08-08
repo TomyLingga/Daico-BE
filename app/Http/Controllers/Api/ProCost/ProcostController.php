@@ -111,7 +111,7 @@ class ProcostController extends Controller
     public function fetchDataMarket($tanggal)
     {
         $currencies = collect($this->getCurrencies());
-        $currencyRates = collect($this->geturlRateCurrencyData($tanggal, "USD"));
+        $currencyRates = collect($this->getRateCurrencyData($tanggal, "USD"));
 
         $dataCpoKpbn = $this->getCpoKpbn($tanggal);
         $dataMRouters = $this->getMarketRouters($tanggal);

@@ -59,11 +59,9 @@ class Controller extends BaseController
         ])->get($this->urlCurrency)->json()['data'] ?? [];
     }
 
-    public function geturlRateCurrencyData($tanggal, $mata_uang)
+    public function getRateCurrencyData($tanggal, $mata_uang)
     {
-        return Http::withHeaders([
-            'Authorization' => $this->token,
-        ])->post($this->urlRateCurrency, [
+        return Http::post($this->urlRateCurrency, [
             'tanggal' => $tanggal,
             'mata_uang' => $mata_uang,
         ])->json()['data'] ?? [];

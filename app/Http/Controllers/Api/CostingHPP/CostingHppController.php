@@ -1,22 +1,21 @@
 <?php
 
-namespace App\Http\Controllers\Api\DetAlloc;
+namespace App\Http\Controllers\Api\CostingHPP;
 
 use App\Http\Controllers\Controller;
-use App\Models\HargaSatuanProduksi;
-use App\Models\LaporanProduksi;
-use App\Models\Plant;
+use App\Http\Controllers\Api\DetAlloc\LaporanProduksiController;
 use App\Models\Setting;
-use App\Models\UraianProduksi;
-use App\Services\LoggerService;
-use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use App\Services\LoggerService;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 
-class LaporanProduksiController extends Controller
+
+class CostingHppController extends Controller
 {
     private $messageFail = 'Something went wrong';
     private $messageMissing = 'Data not found in record';
@@ -25,192 +24,21 @@ class LaporanProduksiController extends Controller
     private $messageCreate = 'Success to Create Data';
     private $messageUpdate = 'Success to Update Data';
 
-    public function store(Request $request)
-    {
-        DB::beginTransaction();
-
-        try {
-            $validator = Validator::make($request->all(), [
-                'id_uraian' => 'required|integer',
-                'tanggal' => 'required|date',
-                'value' => 'required|numeric',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'message' => $validator->errors(),
-                    // 'code' => 400,
-                    'success' => false,
-                ], 400);
-            }
-
-            if ($request->has('id_plant')) {
-                Plant::findOrFail($request->id_plant);
-            }
-
-            UraianProduksi::findOrFail($request->id_uraian);
-
-            $existingLaporan = LaporanProduksi::where('id_uraian', $request->id_uraian)
-                ->where('tanggal', $request->tanggal)
-                ->first();
-
-            if ($existingLaporan) {
-                return response()->json([
-                    'message' => 'A record with the same tanggal and id_uraian already exists.',
-                    'success' => false,
-                ], 409);
-            }
-
-            $latestHargaSatuan = HargaSatuanProduksi::where('id_uraian_produksi', $request->id_uraian)
-            ->orderBy('created_at', 'desc')
-            ->first();
-
-            if (!$latestHargaSatuan) {
-                return response()->json([
-                    'message' => 'No HargaSatuanProduksi found for the given id_uraian_produksi',
-                    'success' => false,
-                ], 404);
-            }
-
-            $data = $request->all();
-            $data['id_harga_satuan'] = $latestHargaSatuan->id;
-
-            $laporanProduksi = LaporanProduksi::create($data);
-
-            LoggerService::logAction($this->userData, $laporanProduksi, 'create', null, $laporanProduksi->toArray());
-
-            DB::commit();
-
-            return response()->json([
-                'data' => $laporanProduksi,
-                'message' => $this->messageCreate,
-                // 'code' => 200,
-                'success' => true,
-            ], 200);
-        } catch (\Exception $e) {
-            DB::rollback();
-            return response()->json([
-                'message' => $this->messageFail,
-                'err' => $e->getTrace()[0],
-                'errMsg' => $e->getMessage(),
-                // 'code' => 500,
-                'success' => false,
-            ], 500);
-        }
-    }
-
-    public function update(Request $request, $id)
-    {
-        DB::beginTransaction();
-
-        try {
-
-            $rules = [
-                'id_uraian' => 'required|integer',
-                'tanggal' => 'required|date',
-                'value' => 'required|numeric',
-            ];
-
-            $validator = Validator::make($request->all(), $rules);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'message' => $validator->errors(),
-                    'success' => false
-                ], 400);
-            }
-
-            if ($request->has('id_plant')) {
-                Plant::findOrFail($request->id_plant);
-            }
-            UraianProduksi::findOrFail($request->id_uraian);
-
-            $latestHargaSatuan = HargaSatuanProduksi::where('id_uraian_produksi', $request->id_uraian)
-            ->orderBy('created_at', 'desc')
-            ->first();
-
-            if (!$latestHargaSatuan) {
-                return response()->json([
-                    'message' => 'No HargaSatuanProduksi found for the given id_uraian_produksi',
-                    'success' => false,
-                ], 404);
-            }
-
-            $data = LaporanProduksi::findOrFail($id);
-            $oldData = $data->toArray();
-
-            $updateData = $request->all();
-            $updateData['id_harga_satuan'] = $latestHargaSatuan->id;
-            $data->update($updateData);
-
-            LoggerService::logAction($this->userData, $data, 'update', $oldData, $data->toArray());
-
-            DB::commit();
-
-            return response()->json([
-                'data' => $data,
-                'message' => $this->messageUpdate,
-                'success' => true,
-            ], 200);
-
-        } catch (\Throwable $e) {
-            DB::rollback();
-            return response()->json([
-                'message' => $this->messageFail,
-                'err' => $e->getTrace()[0],
-                'errMsg' => $e->getMessage(),
-                'success' => false,
-            ], 500);
-        }
-    }
-
-    public function show($id)
+    public function indexPeriod(Request $request)
     {
         try {
-            $data = LaporanProduksi::with(['uraian.kategori', 'hargaSatuan' , 'plant'])->find($id);
 
-            $data['history'] = $this->formatLogs($data->logs);
-            unset($data->logs);
-
-            $data->finalValue = $data->value * $data->hargaSatuan->value;
-
-            return response()->json([
-                'data' => $data,
-                'message' => $this->messageSuccess,
-                'code' => 200
-            ], 200);
-        } catch (QueryException $e) {
-            return response()->json([
-                'message' => $this->messageFail,
-                'err' => $e->getTrace()[0],
-                'errMsg' => $e->getMessage(),
-                // 'code' => 500,
-                'success' => false,
-            ], 500);
-        }
-    }
-
-    public function dataLaporanProduksi($year, $month){
-        $data = LaporanProduksi::whereYear('tanggal', $year)
-                ->whereMonth('tanggal', $month)
-                ->with(['uraian.kategori', 'hargaSatuan', 'plant'])
-                ->get();
-
-            if ($data->isEmpty()) {
-                return response()->json(['message' => $this->messageMissing], 401);
-            }
-
-        return $data;
-    }
-
-    public function indexDate(Request $request)
-    {
-        try {
-            $laporanProduksi = $this->index($request);
+            $laporanProduksi = $this->processRecapData($request);
+            $cpoConsumeQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'CPO (Olah)');
+            $rbdpoQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'RBDPO (Produksi)');
+            $rbdpoRendement = $rbdpoQty/$cpoConsumeQty;
+            $pfadQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'PFAD (Produksi)');
+            $pfadRendement = $pfadQty/$cpoConsumeQty;
 
             return response()->json([
-                'laporanProduksi' => $laporanProduksi['laporanProduksi'],
-                'setting' => $laporanProduksi['settings'],
+                'cpoConsume' => $cpoConsumeQty,
+                'rbdpo' => $rbdpoQty,
+                'pfad' => $pfadQty,
                 'message' => $this->messageAll
             ], 200);
 
@@ -224,181 +52,51 @@ class LaporanProduksiController extends Controller
         }
     }
 
-    public function index(Request $request)
+    private function getTotalQty($laporanProduksi, $nama)
     {
-        $tanggal = Carbon::parse($request->tanggal);
-        $year = $tanggal->year;
-        $month = $tanggal->month;
-
-        $data = $this->dataLaporanProduksi($year, $month);
-
-        $settingNames = ['konversi_liter_to_kg', 'pouch_to_box_1_liter', 'pouch_to_box_2_liter', 'konversi_m_liter_to_kg'];
-        $settings = Setting::whereIn('setting_name', $settingNames)->get();
-
-        $laporanProduksi = $this->prosesLaporanProd($data);
-
-        return [
-            'laporanProduksi' => $laporanProduksi,
-            'settings' => $settings
-        ];
-    }
-
-    public function prosesLaporanProd($data)
-    {
-        $groupedData = $data->groupBy(function($item) {
-            return $item->uraian->kategori->id;
-        });
-
-        $laporanProduksi = [];
-
-        foreach ($groupedData as $kategoriId => $items) {
-            $kategoriName = $items->first()->uraian->kategori->nama;
-
-            $uraianGroups = $items->groupBy(function($item) {
-                return $item->uraian->id;
-            });
-
-            $uraianData = [];
-            foreach ($uraianGroups as $uraianId => $group) {
-                $uraianName = $group->first()->uraian->nama;
-                $totalQty = $group->sum('value');
-                $totalFinalValue = $group->sum(function($item) {
-                    return $item->value * $item->hargaSatuan->value;
-                });
-
-                $itemsData = $group->sortBy('tanggal')->map(function($item) {
-                    return [
-                        'id' => $item->id,
-                        'id_plant' => $item->id_plant,
-                        'id_uraian' => $item->id_uraian,
-                        'tanggal' => $item->tanggal,
-                        'value' => $item->value,
-                        'created_at' => $item->created_at,
-                        'updated_at' => $item->updated_at,
-                        'id_harga_satuan' => $item->id_harga_satuan,
-                        'harga_satuan' => $item->hargaSatuan,
-                        'plant' => $item->plant,
-                    ];
-                })->values();
-
-                $uraianData[] = [
-                    'id' => $uraianId,
-                    'id_category' => $group->first()->uraian->id_category,
-                    'nama' => $uraianName,
-                    'satuan' => $group->first()->uraian->satuan,
-                    'total_qty' => $totalQty,
-                    'total_final_value' => $totalFinalValue,
-                    'items' => $itemsData
-                ];
-            }
-
-            $uraianData = collect($uraianData)->sortBy('id')->values()->toArray();
-
-            $laporanProduksi[] = [
-                'id' => $kategoriId,
-                'nama' => $kategoriName,
-                'uraian' => $uraianData
-            ];
-        }
-
-        return $laporanProduksi;
-    }
-
-    public function settingGet($setting_name)
-    {
-        $setting = Setting::where('setting_name', $setting_name)->first();
-
-        return $setting;
-    }
-
-    public function explodeSettingIds($ids)
-    {
-        $exploded = explode(', ', $ids);
-
-        return $exploded;
-    }
-
-    public function processUraianData($laporanProduksi, $uraianGasIds, $uraianWaterIds, $uraianSteamIds, $uraianPowerIds)
-    {
-        $uraianIdsMapping = [
-            'gasConsumption' => $this->explodeSettingIds($uraianGasIds->setting_value),
-            'waterConsumption' => $this->explodeSettingIds($uraianWaterIds->setting_value),
-            'steamConsumption' => $this->explodeSettingIds($uraianSteamIds->setting_value),
-            'powerConsumption' => $this->explodeSettingIds($uraianPowerIds->setting_value),
-        ];
-
-        $additionalData = [
-            'powerConsumption' => [],
-            'gasConsumption' => [],
-            'waterConsumption' => [],
-            'steamConsumption' => [],
-        ];
-
-        foreach ($laporanProduksi as $kategori) {
-            foreach ($kategori['uraian'] as $uraian) {
-                foreach ($uraianIdsMapping as $category => $idsArray) {
-                    if (in_array($uraian['id'], $idsArray)) {
-                        $additionalData[$category][] = [
-                            'id' => $uraian['id'],
-                            'nama' => $uraian['nama'],
-                            'satuan' => $uraian['satuan'],
-                            'value' => $uraian['total_qty']
-                        ];
-                        break;
+        foreach ($laporanProduksi as $item) {
+            if (isset($item['uraian']) && is_array($item['uraian'])) {
+                foreach ($item['uraian'] as $uraian) {
+                    if (isset($uraian['nama']) && $uraian['nama'] === $nama) {
+                        return isset($uraian['total_qty']) ? (float) $uraian['total_qty'] : 0;
                     }
                 }
             }
         }
-        return $additionalData;
+        return 0;
     }
-    public function recapData(Request $request)
-    {
-        try {
-            $rekap = $this->processRecapData($request);
 
-            return response()->json([
-                'data' => $rekap,
-                'message' => $this->messageAll
-            ], 200);
-
-        } catch (QueryException $e) {
-            return response()->json([
-                'message' => $this->messageFail,
-                'err' => $e->getTrace()[0],
-                'errMsg' => $e->getMessage(),
-                'success' => false,
-            ], 500);
-        }
-    }
     public function processRecapData(Request $request)
     {
         $mata_uang = 'USD';
         $tanggal = Carbon::parse($request->tanggal);
         $year = $tanggal->year;
         $month = $tanggal->month;
+        $laporanProduksiController = new LaporanProduksiController;
 
-        $data = $this->dataLaporanProduksi($year, $month);
 
-        $laporanProduksi = $this->prosesLaporanProd($data);
+        $data = $laporanProduksiController->dataLaporanProduksi($year, $month);
 
-        $hargaGasSetting = $this->settingGet('harga_gas');
-        $minPemakaianGasSetting = $this->settingGet('minimum_pemakaian_gas');
-        $uraianGasIds = $this->settingGet('id_uraian_gas');
-        $uraianWaterIds = $this->settingGet('id_uraian_water');
-        $uraianSteamIds = $this->settingGet('id_uraian_steam');
-        $uraianPowerIds = $this->settingGet('id_uraian_listrik');
+        $laporanProduksi = $laporanProduksiController->prosesLaporanProd($data);
 
-        $settingPersenCostAllocAirRefinery = $this->settingGet('persen_cost_alloc_air_refinery');
+        $hargaGasSetting = $laporanProduksiController->settingGet('harga_gas');
+        $minPemakaianGasSetting = $laporanProduksiController->settingGet('minimum_pemakaian_gas');
+        $uraianGasIds = $laporanProduksiController->settingGet('id_uraian_gas');
+        $uraianWaterIds = $laporanProduksiController->settingGet('id_uraian_water');
+        $uraianSteamIds = $laporanProduksiController->settingGet('id_uraian_steam');
+        $uraianPowerIds = $laporanProduksiController->settingGet('id_uraian_listrik');
+
+        $settingPersenCostAllocAirRefinery = $laporanProduksiController->settingGet('persen_cost_alloc_air_refinery');
         $PersenCostAllocAirRefinery = $settingPersenCostAllocAirRefinery->setting_value;
         $PersenCostAllocAirFractionation = 100 - $PersenCostAllocAirRefinery;
 
-        $settingPersenCostAllocGasRefinery = $this->settingGet('persen_cost_alloc_air_refinery');
+        $settingPersenCostAllocGasRefinery = $laporanProduksiController->settingGet('persen_cost_alloc_air_refinery');
         $PersenCostAllocGasRefinery = $settingPersenCostAllocGasRefinery->setting_value;
         $PersenCostAllocGasFractionation = 100 - $PersenCostAllocGasRefinery;
 
         $currencyRates = collect($this->getRateCurrencyData($tanggal, $mata_uang));
 
-        $additionalData = $this->processUraianData($laporanProduksi, $uraianGasIds, $uraianWaterIds, $uraianSteamIds, $uraianPowerIds);
+        $additionalData = $laporanProduksiController->processUraianData($laporanProduksi, $uraianGasIds, $uraianWaterIds, $uraianSteamIds, $uraianPowerIds);
 
         $incomingSteam = null;
         $distributionToRef = null;
@@ -771,3 +469,4 @@ class LaporanProduksiController extends Controller
         ];
     }
 }
+

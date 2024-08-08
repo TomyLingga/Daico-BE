@@ -73,7 +73,8 @@ Route::get('settings/name/{name}', [App\Http\Controllers\Api\Config\SettingContr
 //General Ledger
 Route::post('general-ledger/date', [App\Http\Controllers\Api\GL\GeneralLedgerController::class, 'index_period']);
 //Cost Prod
-Route::post('cost-prod/get', [App\Http\Controllers\Api\CostProd\CostProdController::class, 'index_period']);
+Route::post('cost-prod/get', [App\Http\Controllers\Api\CostProd\CostProdController::class, 'indexPeriodCoaName']);
+Route::post('beban-prod/get', [App\Http\Controllers\Api\CostProd\CostProdController::class, 'indexPeriod']);
 //Kategori Uraian Produksi
 Route::get('kategori-produksi', [App\Http\Controllers\Api\Config\KategoriUraianProduksiController::class, 'index']);
 Route::get('kategori-produksi/get/{id}', [App\Http\Controllers\Api\Config\KategoriUraianProduksiController::class, 'show']);
@@ -178,6 +179,8 @@ Route::get('stock-retail/latest', [App\Http\Controllers\Api\Stock\StokRetailCont
 //Procost
 Route::post('market-value/date', [App\Http\Controllers\Api\ProCost\ProcostController::class, 'indexDate']);
 
+//CostingHPP
+Route::post('costing-hpp/date', [App\Http\Controllers\Api\CostingHPP\CostingHppController::class, 'indexPeriod']);
 
 Route::group(['middleware' => 'levelone.checker'], function () {
     //Kategori Uraian Produksi
