@@ -25,6 +25,11 @@ class Allocation extends Model
         return $this->hasMany(Debe::class, 'id_allocation');
     }
 
+    public function biayaPenyusutan()
+    {
+        return $this->hasMany(BiayaPenyusutan::class, 'alokasi_id');
+    }
+
     public function logs()
     {
         return $this->morphMany(Log::class, 'model');

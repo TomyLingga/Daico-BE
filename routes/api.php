@@ -181,6 +181,10 @@ Route::post('market-value/date', [App\Http\Controllers\Api\ProCost\ProcostContro
 
 //CostingHPP
 Route::post('costing-hpp/date', [App\Http\Controllers\Api\CostingHPP\CostingHppController::class, 'indexPeriod']);
+//penyusutan
+Route::get('biaya-penyusutan', [App\Http\Controllers\Api\Penyusutan\BiayaPenyusutanController::class, 'index']);
+Route::get('biaya-penyusutan/get/{id}', [App\Http\Controllers\Api\Penyusutan\BiayaPenyusutanController::class, 'show']);
+Route::get('biaya-penyusutan/latest', [App\Http\Controllers\Api\Penyusutan\BiayaPenyusutanController::class, 'indexLatest']);
 
 Route::group(['middleware' => 'levelone.checker'], function () {
     //Kategori Uraian Produksi
@@ -198,6 +202,9 @@ Route::group(['middleware' => 'levelone.checker'], function () {
 });
 
 Route::group(['middleware' => 'levelnine.checker'], function () {
+    //penyusutan
+    Route::post('biaya-penyusutan/add', [App\Http\Controllers\Api\Penyusutan\BiayaPenyusutanController::class, 'store']);
+    Route::post('biaya-penyusutan/update/{id}', [App\Http\Controllers\Api\Penyusutan\BiayaPenyusutanController::class, 'update']);
     //harga satuan produksi
     Route::post('harga-satuan/add', [App\Http\Controllers\Api\Config\HargaSatuanProduksiController::class, 'store']);
     //allocation

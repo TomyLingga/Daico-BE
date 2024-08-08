@@ -32,8 +32,10 @@ class CostingHppController extends Controller
             $cpoConsumeQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'CPO (Olah)');
             $rbdpoQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'RBDPO (Produksi)');
             $rbdpoRendement = $rbdpoQty/$cpoConsumeQty;
+            $rbdpoRendementPercentage = $rbdpoRendement*100;
             $pfadQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'PFAD (Produksi)');
             $pfadRendement = $pfadQty/$cpoConsumeQty;
+            $pfadRendementPercentage = $pfadRendement*100;
 
             return response()->json([
                 'cpoConsume' => $cpoConsumeQty,
