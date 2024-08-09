@@ -24,25 +24,13 @@ class CostingHppController extends Controller
     private $messageCreate = 'Success to Create Data';
     private $messageUpdate = 'Success to Update Data';
 
-    // public
-
     public function indexPeriod(Request $request)
     {
         try {
-
-            $laporanProduksi = $this->processRecapData($request);
-            $cpoConsumeQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'CPO (Olah)');
-            $rbdpoQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'RBDPO (Produksi)');
-            $rbdpoRendement = $rbdpoQty/$cpoConsumeQty;
-            $rbdpoRendementPercentage = $rbdpoRendement*100;
-            $pfadQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'PFAD (Produksi)');
-            $pfadRendement = $pfadQty/$cpoConsumeQty;
-            $pfadRendementPercentage = $pfadRendement*100;
+            $processResult = $this->processIndexPeriod($request);
 
             return response()->json([
-                'cpoConsume' => $cpoConsumeQty,
-                'rbdpo' => $rbdpoQty,
-                'pfad' => $pfadQty,
+                'data' => $processResult['data'],
                 'message' => $this->messageAll
             ], 200);
 
@@ -56,18 +44,47 @@ class CostingHppController extends Controller
         }
     }
 
-    private function getTotalQty($laporanProduksi, $nama)
+    public function processIndexPeriod($request)
     {
+        $laporanProduksi = $this->processRecapData($request);
+        $cpoConsumeQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'Refinery', 'CPO (Olah)');
+        $rbdpoQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'Refinery', 'RBDPO (Produksi)');
+        $rbdpoRendement = $rbdpoQty / $cpoConsumeQty;
+        $rbdpoRendementPercentage = $rbdpoRendement * 100;
+        $pfadQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'Refinery', 'PFAD (Produksi)');
+        $pfadRendement = $pfadQty / $cpoConsumeQty;
+        $pfadRendementPercentage = $pfadRendement * 100;
+
+        return [
+            'data' => [
+                'cpoConsume' => $cpoConsumeQty,
+                'rbdpo' => $rbdpoQty,
+                'pfad' => $pfadQty,
+                'rbdpoRendement' => $rbdpoRendement,
+                'rbdpoRendementPercentage' => $rbdpoRendementPercentage,
+                'pfadRendement' => $pfadRendement,
+                'pfadRendementPercentage' => $pfadRendementPercentage,
+            ]
+        ];
+    }
+
+    public function getTotalQty($laporanProduksi, $namaItem, $namaUraian)
+    {
+        $totalQty = 0;
+
         foreach ($laporanProduksi as $item) {
-            if (isset($item['uraian']) && is_array($item['uraian'])) {
-                foreach ($item['uraian'] as $uraian) {
-                    if (isset($uraian['nama']) && $uraian['nama'] === $nama) {
-                        return isset($uraian['total_qty']) ? (float) $uraian['total_qty'] : 0;
+            if (isset($item['nama']) && $item['nama'] === $namaItem) {
+                if (isset($item['uraian']) && is_array($item['uraian'])) {
+                    foreach ($item['uraian'] as $uraian) {
+                        if (isset($uraian['nama']) && $uraian['nama'] === $namaUraian) {
+                            $totalQty += isset($uraian['total_qty']) ? (float) $uraian['total_qty'] : 0;
+                        }
                     }
                 }
             }
         }
-        return 0;
+
+        return $totalQty;
     }
 
     public function processRecapData(Request $request)
