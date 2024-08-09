@@ -557,11 +557,11 @@ class LaporanProduksiController extends Controller
         ];
 
         $biayaPemakaianGas = [
-            'Incoming *based on Pertagas' => $incomingPertagas,
-            'Harga Gas' => $hargaGas,
-            'Nilai Biaya Tagihan USD' => $biayaTagihanUSD,
+            'incomingBasedOnPertagas' => $incomingPertagas,
+            'hargaGas' => $hargaGas,
+            'nilaiBiayaTagihanUSD' => $biayaTagihanUSD,
             'Kurs' => $averageCurrencyRate,
-            'Nilai Biaya Tagihan IDR' => $biayaTagihanIDR
+            'nilaiBiayaTagihanIDR' => $biayaTagihanIDR
         ];
 
         $minPemakaianGas = [
@@ -585,7 +585,7 @@ class LaporanProduksiController extends Controller
         ];
 
         $perhitunganPenaltyGas = [
-            'incoming*BasedOnPertagas' => $incomingPertagas,
+            'incomingBasedOnPertagas' => $incomingPertagas,
             'minimumPemakaian' => $minPemakaianGas,
             'plusMinusPemakaianGas' => $plusminPemakaianGas,
             'hargaGas' => $hargaGas,
