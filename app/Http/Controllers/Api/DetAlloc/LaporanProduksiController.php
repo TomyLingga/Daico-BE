@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\DetAlloc;
 
 use App\Http\Controllers\Controller;
+use App\Models\BiayaPenyusutan;
 use App\Models\HargaSatuanProduksi;
 use App\Models\LaporanProduksi;
 use App\Models\Plant;
@@ -584,13 +585,13 @@ class LaporanProduksiController extends Controller
         ];
 
         $perhitunganPenaltyGas = [
-            'Incoming *based on Pertagas' => $incomingPertagas,
-            'Minimum Pemakaian' => $minPemakaianGas,
-            '+/(-) Pemakaian Gas' => $plusminPemakaianGas,
-            'Harga Gas' => $hargaGas,
-            'Nilai Biaya Penalty USD' => $penaltyUSD,
+            'incoming*BasedOnPertagas' => $incomingPertagas,
+            'minimumPemakaian' => $minPemakaianGas,
+            'plusMinusPemakaianGas' => $plusminPemakaianGas,
+            'hargaGas' => $hargaGas,
+            'nilaiBiayaPenaltyUSD' => $penaltyUSD,
             'Kurs' => $averageCurrencyRate,
-            'Nilai Biaya Penalty IDR' => $penaltyIDR
+            'nilaiBiayaPenaltyIDR' => $penaltyIDR
         ];
 
         $totalPemakaianAirM3 =
@@ -619,16 +620,16 @@ class LaporanProduksiController extends Controller
         $fraksinasim3   = $outgoingSoftenerProductFrac['value'] ?? 0;
 
         $allocationAir  = [
-            'Refinery (m3)' => $refinerym3,
-            'Fraksinasi (m3)' => $fraksinasim3,
-            'RO' => $outgoingROProduct['value'] ?? 0,
-            'Other' => $outgoingOthers['value'] ?? 0,
-            'Waste' => $wasteWaterEffluent['value'] ?? 0,
-            'Total Pemakaian Air (m3)' => $totalPemakaianAirM3,
-            'Refinery (allocation)' => $refineryAllocationAir,
-            'Fraksinasi (allocation)' => $fractionationAllocationAir,
-            'Total Pemakaian Air (allocation)' => $totalPemakaianAirAllocation,
-            'Result' => $totalPemakaianAirM3 - $totalPemakaianAirAllocation,
+            'refinery(m3)' => $refinerym3,
+            'fraksinasi(m3)' => $fraksinasim3,
+            'ro' => $outgoingROProduct['value'] ?? 0,
+            'other' => $outgoingOthers['value'] ?? 0,
+            'waste' => $wasteWaterEffluent['value'] ?? 0,
+            'totalPemakaianAir(m3)' => $totalPemakaianAirM3,
+            'refinery(allocation)' => $refineryAllocationAir,
+            'fraksinasi(allocation)' => $fractionationAllocationAir,
+            'totalPemakaianAir(allocation)' => $totalPemakaianAirAllocation,
+            'result' => $totalPemakaianAirM3 - $totalPemakaianAirAllocation,
         ];
 
 
@@ -651,13 +652,13 @@ class LaporanProduksiController extends Controller
         $totalPemakaianGasAllocation = $refineryAllocationGas + $fractionationAllocationGas;
 
         $allocationGas = [
-            'HP Boiler Refinery' => $hpBoilerRefineryValue,
-            'MP Boiler 1, 2' => $mpBoiler12Value,
-            'Total Pemakaian Gas (mmbtu)' => $totalPemakaianGasmmbtu,
-            'Refinery (allocation)' => $refineryAllocationGas,
-            'Fraksinasi (allocation)' => $fractionationAllocationGas,
-            'Total Pemakaian Gas (allocation)' => $totalPemakaianGasAllocation,
-            'Result' => $totalPemakaianGasmmbtu - $totalPemakaianGasAllocation,
+            'hpBoilerRefinery' => $hpBoilerRefineryValue,
+            'mpBoiler12' => $mpBoiler12Value,
+            'totalPemakaianGas(mmbtu)' => $totalPemakaianGasmmbtu,
+            'refinery(allocation)' => $refineryAllocationGas,
+            'fraksinasi(allocation)' => $fractionationAllocationGas,
+            'totalPemakaianGas(allocation)' => $totalPemakaianGasAllocation,
+            'result' => $totalPemakaianGasmmbtu - $totalPemakaianGasAllocation,
         ];
 
         $pemakaianListrikPLNValue = $pemakaianListrikPLN['value'] ?? 0;
@@ -681,12 +682,12 @@ class LaporanProduksiController extends Controller
         $totalPemakaianListrikAllocation = $refineryAllocationListrik + $fractionationAllocationListrik;
 
         $allocationPower = [
-            'Listrik' => $pemakaianListrikPLNValue,
-            'Total Listrik (kwh)' => $totalListrikKwh,
-            'Refinery (allocation)' => $refineryAllocationListrik,
-            'Fraksinasi (allocation)' => $fractionationAllocationListrik,
-            'Total Pemakaian Listrik (allocation)' => $totalPemakaianListrikAllocation,
-            'Result' => $totalListrikKwh - $totalPemakaianListrikAllocation,
+            'listrik' => $pemakaianListrikPLNValue,
+            'totalListrik(kwh)' => $totalListrikKwh,
+            'refinery(allocation)' => $refineryAllocationListrik,
+            'fraksinasi(allocation)' => $fractionationAllocationListrik,
+            'totalPemakaianListrik(allocation)' => $totalPemakaianListrikAllocation,
+            'result' => $totalListrikKwh - $totalPemakaianListrikAllocation,
         ];
 
         $percentageRefineryGas = $totalPemakaianGasAllocation ? ($refineryAllocationGas / $totalPemakaianGasAllocation) : 0;
@@ -756,6 +757,59 @@ class LaporanProduksiController extends Controller
 
         $settingNames = ['konversi_liter_to_kg', 'pouch_to_box_1_liter', 'pouch_to_box_2_liter', 'konversi_m_liter_to_kg'];
         $settings = Setting::whereIn('setting_name', $settingNames)->get();
+
+        // $subQuery = BiayaPenyusutan::select('alokasi_id', DB::raw('MAX(tanggal) as latest_date'))
+        //         ->groupBy('alokasi_id');
+
+        //         $penyusutan = BiayaPenyusutan::with('allocation')
+        //         ->joinSub($subQuery, 'latest', function($join) {
+        //             $join->on('biaya_penyusutan.alokasi_id', '=', 'latest.alokasi_id')
+        //                 ->on('biaya_penyusutan.tanggal', '=', 'latest.latest_date');
+        //         })
+        //         ->get();
+
+        //     // Initialize arrays to store Unit data
+        //     $unitQty = [];
+        //     $unitPercent = [];
+        //     $totalUnitQty = 0;
+
+        //     // Calculate total Unit quantity
+        //     foreach ($penyusutan as $item) {
+        //         $totalUnitQty += $item->value;
+        //     }
+
+        //     // Populate data arrays for Unit
+        //     foreach ($penyusutan as $item) {
+        //         $unitQty[] = [
+        //             'name' => $item->allocation->nama,
+        //             'value' => $item->value,
+        //         ];
+
+        //         $unitPercent[] = [
+        //             'name' => $item->allocation->nama,
+        //             'value' => $item->value / $totalUnitQty * 100,
+        //         ];
+        //     }
+
+        //     $biayaPenyusutan = [
+        //         'name' => 'Unit',
+        //         'columns' => [
+        //             [
+        //                 'name' => 'Qty',
+        //                 'total' => $totalUnitQty,
+        //                 'alokasi' => $unitQty,
+        //             ],
+        //             [
+        //                 'name' => '%',
+        //                 'total' => 100,
+        //                 'alokasi' => $unitPercent,
+        //             ]
+        //         ]
+        //     ];
+
+        //     dd($biayaPenyusutan);
+            // dd(json_encode($biayaPenyusutan));
+
         return [
             'settings' => $settings,
             'laporanProduksi' => $laporanProduksi,

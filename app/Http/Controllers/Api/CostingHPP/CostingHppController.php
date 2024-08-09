@@ -24,6 +24,8 @@ class CostingHppController extends Controller
     private $messageCreate = 'Success to Create Data';
     private $messageUpdate = 'Success to Update Data';
 
+    // public
+
     public function indexPeriod(Request $request)
     {
         try {

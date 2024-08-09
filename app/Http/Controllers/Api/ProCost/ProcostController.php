@@ -23,66 +23,93 @@ class ProcostController extends Controller
     {
         try {
             $tanggal = $request->tanggal;
-            $data = $this->fetchDataMarket($tanggal);
 
-            if ($data['dataMRouters']->isEmpty() || $data['dataLDuty']->isEmpty()) {
-                return response()->json(['message' => $this->messageMissing], 401);
+            $processResult = $this->processIndexDate($tanggal);
+
+            if ($processResult['error']) {
+                return $processResult['response'];
             }
 
-            $formattedDataMRouters = $data['dataMRouters']->groupBy('bulky.id')->map(function ($items, $bulkyId) {
-                $bulky = $items->first()['bulky'];
-                return [
-                    'id' => $bulky['id'],
-                    'name' => $bulky['name'],
-                    'item' => $items->map(function ($item) {
-                        return [
-                            'id' => $item['id'],
-                            'id_bulky' => $item['id_bulky'],
-                            'tanggal' => $item['tanggal'],
-                            'nilai' => $item['nilai'],
-                            'currency_id' => $item['currency_id'],
-                            'created_at' => $item['created_at'],
-                            'updated_at' => $item['updated_at'],
-                        ];
-                    })
-                ];
-            })->values();
+            return response()->json($processResult['data'], 200);
 
-            $formattedDataLDuty = $data['dataLDuty']->groupBy('bulky.id')->map(function ($items, $bulkyId) {
-                $bulky = $items->first()['bulky'];
-                return [
-                    'id' => $bulky['id'],
-                    'name' => $bulky['name'],
-                    'item' => $items->map(function ($item) {
-                        return [
-                            'id' => $item['id'],
-                            'id_bulky' => $item['id_bulky'],
-                            'tanggal' => $item['tanggal'],
-                            'nilai' => $item['nilai'],
-                            'currency_id' => $item['currency_id'],
-                            'created_at' => $item['created_at'],
-                            'updated_at' => $item['updated_at'],
-                        ];
-                    })
-                ];
-            })->values();
-            $formattedMarketExcludedLevyDuty = $data['marketExcludedLevyDuty']->groupBy('bulky.id')->map(function ($items, $bulkyId) {
-                $bulky = $items->first()['bulky'];
-                return [
-                    'id' => $bulky['id'],
-                    'name' => $bulky['name'],
-                    'item' => $items->map(function ($item) {
-                        return [
-                            'tanggal' => $item['tanggal'],
-                            'nilai' => $item['nilai'],
-                            'id_bulky' => $item['id_bulky'],
-                            'currency_id' => $item['currency_id'],
-                        ];
-                    })
-                ];
-            })->values();
-
+        } catch (QueryException $e) {
             return response()->json([
+                'message' => $this->messageFail,
+                'err' => $e->getTrace()[0],
+                'errMsg' => $e->getMessage(),
+                'success' => false,
+            ], 500);
+        }
+    }
+
+    public function processIndexDate($tanggal)
+    {
+        $data = $this->fetchDataMarket($tanggal);
+
+        if ($data['dataMRouters']->isEmpty() || $data['dataLDuty']->isEmpty()) {
+            return [
+                'error' => true,
+                'response' => response()->json(['message' => $this->messageMissing], 401),
+            ];
+        }
+
+        $formattedDataMRouters = $data['dataMRouters']->groupBy('bulky.id')->map(function ($items, $bulkyId) {
+            $bulky = $items->first()['bulky'];
+            return [
+                'id' => $bulky['id'],
+                'name' => $bulky['name'],
+                'item' => $items->map(function ($item) {
+                    return [
+                        'id' => $item['id'],
+                        'id_bulky' => $item['id_bulky'],
+                        'tanggal' => $item['tanggal'],
+                        'nilai' => $item['nilai'],
+                        'currency_id' => $item['currency_id'],
+                        'created_at' => $item['created_at'],
+                        'updated_at' => $item['updated_at'],
+                    ];
+                })
+            ];
+        })->values();
+
+        $formattedDataLDuty = $data['dataLDuty']->groupBy('bulky.id')->map(function ($items, $bulkyId) {
+            $bulky = $items->first()['bulky'];
+            return [
+                'id' => $bulky['id'],
+                'name' => $bulky['name'],
+                'item' => $items->map(function ($item) {
+                    return [
+                        'id' => $item['id'],
+                        'id_bulky' => $item['id_bulky'],
+                        'tanggal' => $item['tanggal'],
+                        'nilai' => $item['nilai'],
+                        'currency_id' => $item['currency_id'],
+                        'created_at' => $item['created_at'],
+                        'updated_at' => $item['updated_at'],
+                    ];
+                })
+            ];
+        })->values();
+
+        $formattedMarketExcludedLevyDuty = $data['marketExcludedLevyDuty']->groupBy('bulky.id')->map(function ($items, $bulkyId) {
+            $bulky = $items->first()['bulky'];
+            return [
+                'id' => $bulky['id'],
+                'name' => $bulky['name'],
+                'item' => $items->map(function ($item) {
+                    return [
+                        'tanggal' => $item['tanggal'],
+                        'nilai' => $item['nilai'],
+                        'id_bulky' => $item['id_bulky'],
+                        'currency_id' => $item['currency_id'],
+                    ];
+                })
+            ];
+        })->values();
+
+        return [
+            'error' => false,
+            'data' => [
                 'dataMRouters' => $formattedDataMRouters,
                 'averageDataMRoutersPerBulky' => $data['averageDataMRoutersPerBulky'],
                 'dataLDuty' => $formattedDataLDuty,
@@ -95,17 +122,9 @@ class ProcostController extends Controller
                 'averageMarketValue' => $data['averageMarketValue'],
                 'dataCpoKpbn' => $data['dataCpoKpbn'],
                 'averageCpoKpbn' => $data['averageCpoKpbn'],
-                'message' => $this->messageAll
-            ], 200);
-
-        } catch (QueryException $e) {
-            return response()->json([
-                'message' => $this->messageFail,
-                'err' => $e->getTrace()[0],
-                'errMsg' => $e->getMessage(),
-                'success' => false,
-            ], 500);
-        }
+                'message' => $this->messageAll,
+            ],
+        ];
     }
 
     public function fetchDataMarket($tanggal)

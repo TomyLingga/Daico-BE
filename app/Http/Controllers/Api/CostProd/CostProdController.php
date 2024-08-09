@@ -13,8 +13,18 @@ class CostProdController extends Controller
 {
     public function indexPeriod(Request $request)
     {
-        $tanggal = $request->get('tanggal');
-        $settingIds = [9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29];
+        $settingNames = [
+            'coa_bahan_baku', 'coa_gaji_tunjangan_sosial_pimpinan', 'coa_gaji_tunjangan_sosial_pelaksana',
+            'coa_bahan_bakar', 'coa_bahan_kimia_pendukung_produksi', 'coa_analisa_lab', 'coa_listrik',
+            'coa_air', 'coa_asuransi_pabrik', 'coa_limbah_pihak3', 'coa_bengkel_pemeliharaan',
+            'coa_gaji_tunjangan', 'coa_salvaco', 'coa_nusakita', 'coa_inl', 'coa_minyakita',
+            'coa_bahan_kimia', 'coa_pengangkutan_langsir', 'coa_pengepakan_lain',
+            'coa_asuransi_gudang_filling', 'coa_depresiasi'
+        ];
+
+        $settings = Setting::whereIn('setting_name', $settingNames)->get();
+
+        $settingIds = $settings->pluck('id')->toArray();
 
         $data = $this->processIndexPeriod($request, $settingIds);
 
@@ -26,6 +36,7 @@ class CostProdController extends Controller
         ], 200);
     }
 
+
     private function processIndexPeriod(Request $request, $settingIds)
     {
         $tanggal = Carbon::parse($request->tanggal);
@@ -33,11 +44,9 @@ class CostProdController extends Controller
         $coa = Setting::whereIn('id', $settingIds)->orderBy('id')->get();
         $gl = collect($this->getGeneralLedgerData($tanggal));
 
-        // Fetch laporanData
         $laporanProduksiController = new LaporanProduksiController();
         $laporanData = $laporanProduksiController->index($request);
 
-        // Extract the total_qty for Refinery's CPO Olah
         $totalQtyRefineryCPO = 0;
         if (isset($laporanData['laporanProduksi'])) {
             foreach ($laporanData['laporanProduksi'] as $laporan) {
@@ -52,7 +61,6 @@ class CostProdController extends Controller
             }
         }
 
-        // Process COA data
         $data = $coa->map(function($coaSetting) use ($debe, $gl, $totalQtyRefineryCPO) {
             $coaNumbers = explode(',', $coaSetting->setting_value);
             $coaData = [];
