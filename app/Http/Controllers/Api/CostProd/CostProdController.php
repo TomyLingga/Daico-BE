@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\CostProd;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\DetAlloc\LaporanProduksiController;
 use App\Models\Debe;
 use App\Models\Setting;
 use Carbon\Carbon;
@@ -15,7 +16,7 @@ class CostProdController extends Controller
         $tanggal = $request->get('tanggal');
         $settingIds = [9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29];
 
-        $data = $this->processIndexPeriod($tanggal, $settingIds);
+        $data = $this->processIndexPeriod($request, $settingIds);
 
         return response()->json([
             'data' => $data,
@@ -25,33 +26,52 @@ class CostProdController extends Controller
         ], 200);
     }
 
-    private function processIndexPeriod($tanggal, $settingIds)
+    private function processIndexPeriod(Request $request, $settingIds)
     {
-        $date = Carbon::parse($tanggal);
+        $tanggal = Carbon::parse($request->tanggal);
         $debe = Debe::with('cat3', 'mReport', 'cCentre', 'plant', 'allocation')->get();
-
         $coa = Setting::whereIn('id', $settingIds)->orderBy('id')->get();
-        $gl = collect($this->getGeneralLedgerData($tanggal)); // Convert $gl to a collection
+        $gl = collect($this->getGeneralLedgerData($tanggal));
 
-        $data = $coa->map(function($coaSetting) use ($debe, $gl) {
+        // Fetch laporanData
+        $laporanProduksiController = new LaporanProduksiController();
+        $laporanData = $laporanProduksiController->index($request);
+
+        // Extract the total_qty for Refinery's CPO Olah
+        $totalQtyRefineryCPO = 0;
+        if (isset($laporanData['laporanProduksi'])) {
+            foreach ($laporanData['laporanProduksi'] as $laporan) {
+                if ($laporan['nama'] === 'Refinery') {
+                    foreach ($laporan['uraian'] as $uraian) {
+                        if ($uraian['nama'] === 'CPO (Olah)') {
+                            $totalQtyRefineryCPO = $uraian['total_qty'];
+                            break 2;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Process COA data
+        $data = $coa->map(function($coaSetting) use ($debe, $gl, $totalQtyRefineryCPO) {
             $coaNumbers = explode(',', $coaSetting->setting_value);
             $coaData = [];
             $totalDebitSetting = 0;
             $totalCreditSetting = 0;
+            $mReportName = '';
 
             foreach ($coaNumbers as $coaNumber) {
-                // Filter GL and Debe data by COA number
                 $glData = $gl->filter(function($item) use ($coaNumber) {
                     return $item['account_account']['code'] == $coaNumber;
                 });
 
                 $debeModel = $debe->firstWhere('coa', $coaNumber);
+                $mReportName = $debeModel ? $debeModel->mReport->nama : '';
 
                 $totalDebit = $glData->sum('debit');
                 $totalCredit = $glData->sum('credit');
                 $result = $totalDebit - $totalCredit;
 
-                // Sum totals for the setting
                 $totalDebitSetting += $totalDebit;
                 $totalCreditSetting += $totalCredit;
 
@@ -66,76 +86,20 @@ class CostProdController extends Controller
             }
 
             return [
-                'name' => $coaSetting->setting_name,
+                'nama' => $mReportName,
+                'setting' => $coaSetting->setting_name,
                 'total_debit' => $totalDebitSetting,
                 'total_credit' => $totalCreditSetting,
                 'result' => $totalDebitSetting - $totalCreditSetting,
+                'total_qty_refinery_cpo_olah' => $totalQtyRefineryCPO,
+                'rp_per_kg_cpo_olah' => $totalQtyRefineryCPO > 0 ? ($totalDebitSetting - $totalCreditSetting) / $totalQtyRefineryCPO : 0,
                 'coa' => $coaData
             ];
         });
 
-        return $data;
+        return ['data' => $data->values()];
     }
 
-    // public function indexPeriod(Request $request)
-    // {
-    //     $tanggal = $request->get('tanggal');
-    //     $settingIds = [9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29];
-
-    //     $date = Carbon::parse($tanggal);
-    //     $debe = Debe::with('cat3', 'mReport', 'cCentre', 'plant', 'allocation')->get();
-
-    //     $coa = Setting::whereIn('id', $settingIds)->orderBy('id')->get();
-    //     $gl = collect($this->getGeneralLedgerData($tanggal)); // Convert $gl to a collection
-
-    //     $data = $coa->map(function($coaSetting) use ($debe, $gl) {
-    //         $coaNumbers = explode(',', $coaSetting->setting_value);
-    //         $coaData = [];
-    //         $totalDebitSetting = 0;
-    //         $totalCreditSetting = 0;
-
-    //         foreach ($coaNumbers as $coaNumber) {
-    //             // Filter GL and Debe data by COA number
-    //             $glData = $gl->filter(function($item) use ($coaNumber) {
-    //                 return $item['account_account']['code'] == $coaNumber;
-    //             });
-
-    //             $debeModel = $debe->firstWhere('coa', $coaNumber);
-
-    //             $totalDebit = $glData->sum('debit');
-    //             $totalCredit = $glData->sum('credit');
-    //             $result = $totalDebit - $totalCredit;
-
-    //             // Sum totals for the setting
-    //             $totalDebitSetting += $totalDebit;
-    //             $totalCreditSetting += $totalCredit;
-
-    //             $coaData[] = [
-    //                 'coa_number' => $coaNumber,
-    //                 'debe' => $debeModel,
-    //                 'gl' => $glData->values(),
-    //                 'total_debit' => $totalDebit,
-    //                 'total_credit' => $totalCredit,
-    //                 'result' => $result
-    //             ];
-    //         }
-
-    //         return [
-    //             'name' => $coaSetting->setting_name,
-    //             'total_debit' => $totalDebitSetting,
-    //             'total_credit' => $totalCreditSetting,
-    //             'result' => $totalDebitSetting - $totalCreditSetting,
-    //             'coa' => $coaData
-    //         ];
-    //     });
-
-    //     return response()->json([
-    //         'data' => $data,
-    //         'message' => 'Data Retrieved Successfully',
-    //         'code' => 200,
-    //         'success' => true,
-    //     ], 200);
-    // }
 
     public function indexPeriodCoaName(Request $request)
     {
