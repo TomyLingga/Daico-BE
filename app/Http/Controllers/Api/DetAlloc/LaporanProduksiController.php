@@ -620,15 +620,15 @@ class LaporanProduksiController extends Controller
         $fraksinasim3   = $outgoingSoftenerProductFrac['value'] ?? 0;
 
         $allocationAir  = [
-            'refinery(m3)' => $refinerym3,
-            'fraksinasi(m3)' => $fraksinasim3,
+            'refinery_m3' => $refinerym3,
+            'fraksinasi_m3' => $fraksinasim3,
             'ro' => $outgoingROProduct['value'] ?? 0,
             'other' => $outgoingOthers['value'] ?? 0,
             'waste' => $wasteWaterEffluent['value'] ?? 0,
-            'totalPemakaianAir(m3)' => $totalPemakaianAirM3,
-            'refinery(allocation)' => $refineryAllocationAir,
-            'fraksinasi(allocation)' => $fractionationAllocationAir,
-            'totalPemakaianAir(allocation)' => $totalPemakaianAirAllocation,
+            'totalPemakaianAir_m3' => $totalPemakaianAirM3,
+            'refinery_allocation' => $refineryAllocationAir,
+            'fraksinasi_allocation' => $fractionationAllocationAir,
+            'totalPemakaianAir_allocation' => $totalPemakaianAirAllocation,
             'result' => $totalPemakaianAirM3 - $totalPemakaianAirAllocation,
         ];
 
@@ -654,10 +654,10 @@ class LaporanProduksiController extends Controller
         $allocationGas = [
             'hpBoilerRefinery' => $hpBoilerRefineryValue,
             'mpBoiler12' => $mpBoiler12Value,
-            'totalPemakaianGas(mmbtu)' => $totalPemakaianGasmmbtu,
-            'refinery(allocation)' => $refineryAllocationGas,
-            'fraksinasi(allocation)' => $fractionationAllocationGas,
-            'totalPemakaianGas(allocation)' => $totalPemakaianGasAllocation,
+            'totalPemakaianGas_mmbtu' => $totalPemakaianGasmmbtu,
+            'refinery_allocation' => $refineryAllocationGas,
+            'fraksinasi_allocation' => $fractionationAllocationGas,
+            'totalPemakaianGas_allocation' => $totalPemakaianGasAllocation,
             'result' => $totalPemakaianGasmmbtu - $totalPemakaianGasAllocation,
         ];
 
@@ -683,10 +683,10 @@ class LaporanProduksiController extends Controller
 
         $allocationPower = [
             'listrik' => $pemakaianListrikPLNValue,
-            'totalListrik(kwh)' => $totalListrikKwh,
-            'refinery(allocation)' => $refineryAllocationListrik,
-            'fraksinasi(allocation)' => $fractionationAllocationListrik,
-            'totalPemakaianListrik(allocation)' => $totalPemakaianListrikAllocation,
+            'totalListrik_kwh' => $totalListrikKwh,
+            'refinery_allocation' => $refineryAllocationListrik,
+            'fraksinasi_allocation' => $fractionationAllocationListrik,
+            'totalPemakaianListrik_allocation' => $totalPemakaianListrikAllocation,
             'result' => $totalListrikKwh - $totalPemakaianListrikAllocation,
         ];
 
