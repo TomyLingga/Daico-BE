@@ -123,9 +123,6 @@ class ProcostController extends Controller
         $produksiFraksinasiIV58Data = $this->generateProduksiFraksinasiIV58($costingHppController, $laporanProduksi, $averages);
         $produksiFraksinasiIV60Data = $this->generateProduksiFraksinasiIV60($costingHppController, $laporanProduksi, $averages);
 
-
-
-
         return [
             'error' => false,
             'data' => [

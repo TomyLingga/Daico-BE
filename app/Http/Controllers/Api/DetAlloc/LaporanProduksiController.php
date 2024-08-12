@@ -758,57 +758,54 @@ class LaporanProduksiController extends Controller
         $settingNames = ['konversi_liter_to_kg', 'pouch_to_box_1_liter', 'pouch_to_box_2_liter', 'konversi_m_liter_to_kg'];
         $settings = Setting::whereIn('setting_name', $settingNames)->get();
 
-        // $subQuery = BiayaPenyusutan::select('alokasi_id', DB::raw('MAX(tanggal) as latest_date'))
-        //         ->groupBy('alokasi_id');
+        $subQuery = BiayaPenyusutan::select('alokasi_id', DB::raw('MAX(tanggal) as latest_date'))
+                ->groupBy('alokasi_id');
 
-        //         $penyusutan = BiayaPenyusutan::with('allocation')
-        //         ->joinSub($subQuery, 'latest', function($join) {
-        //             $join->on('biaya_penyusutan.alokasi_id', '=', 'latest.alokasi_id')
-        //                 ->on('biaya_penyusutan.tanggal', '=', 'latest.latest_date');
-        //         })
-        //         ->get();
+                $penyusutan = BiayaPenyusutan::with('allocation')
+                ->joinSub($subQuery, 'latest', function($join) {
+                    $join->on('biaya_penyusutan.alokasi_id', '=', 'latest.alokasi_id')
+                        ->on('biaya_penyusutan.tanggal', '=', 'latest.latest_date');
+                })
+                ->get();
 
-        //     // Initialize arrays to store Unit data
-        //     $unitQty = [];
-        //     $unitPercent = [];
-        //     $totalUnitQty = 0;
+            $unitQty = [];
+            $unitPercent = [];
+            $totalUnitQty = 0;
 
-        //     // Calculate total Unit quantity
-        //     foreach ($penyusutan as $item) {
-        //         $totalUnitQty += $item->value;
-        //     }
+            foreach ($penyusutan as $item) {
+                $totalUnitQty += $item->value;
+            }
 
-        //     // Populate data arrays for Unit
-        //     foreach ($penyusutan as $item) {
-        //         $unitQty[] = [
-        //             'name' => $item->allocation->nama,
-        //             'value' => $item->value,
-        //         ];
+            foreach ($penyusutan as $item) {
+                $unitQty[] = [
+                    'name' => $item->allocation->nama,
+                    'value' => $item->value,
+                ];
 
-        //         $unitPercent[] = [
-        //             'name' => $item->allocation->nama,
-        //             'value' => $item->value / $totalUnitQty * 100,
-        //         ];
-        //     }
+                $unitPercent[] = [
+                    'name' => $item->allocation->nama,
+                    'value' => $item->value / $totalUnitQty * 100,
+                ];
+            }
 
-        //     $biayaPenyusutan = [
-        //         'name' => 'Unit',
-        //         'columns' => [
-        //             [
-        //                 'name' => 'Qty',
-        //                 'total' => $totalUnitQty,
-        //                 'alokasi' => $unitQty,
-        //             ],
-        //             [
-        //                 'name' => '%',
-        //                 'total' => 100,
-        //                 'alokasi' => $unitPercent,
-        //             ]
-        //         ]
-        //     ];
+            $biayaPenyusutan = [
+                'name' => 'Unit',
+                'columns' => [
+                    [
+                        'name' => 'Qty',
+                        'total' => $totalUnitQty,
+                        'alokasi' => $unitQty,
+                    ],
+                    [
+                        'name' => '%',
+                        'total' => 100,
+                        'alokasi' => $unitPercent,
+                    ]
+                ]
+            ];
 
-        //     dd($biayaPenyusutan);
-            // dd(json_encode($biayaPenyusutan));
+            // dd($biayaPenyusutan);
+            dd(json_encode($biayaPenyusutan));
 
         return [
             'settings' => $settings,
