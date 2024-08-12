@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\DetAlloc;
 
+use App\Http\Controllers\Api\CostingHPP\CostingHppController;
 use App\Http\Controllers\Controller;
 use App\Models\BiayaPenyusutan;
 use App\Models\HargaSatuanProduksi;
@@ -788,7 +789,7 @@ class LaporanProduksiController extends Controller
                 ];
             }
 
-            $biayaPenyusutan = [
+            $biayaPenyusutanUnit = [
                 'name' => 'Unit',
                 'columns' => [
                     [
@@ -803,9 +804,53 @@ class LaporanProduksiController extends Controller
                     ]
                 ]
             ];
+        // $costingHppController = new CostingHppController;
+        // $cpoConsumeQty = $costingHppController->getTotalQty($laporanProduksi, 'Refinery', 'CPO (Olah)');
 
-            // dd($biayaPenyusutan);
-            dd(json_encode($biayaPenyusutan));
+        // $rbdpoQty = $costingHppController->getTotalQty($laporanProduksi, 'Refinery', 'RBDPO (Produksi)');
+        // // $rbdpoRendement = $cpoConsumeQty != 0 ? $rbdpoQty / $cpoConsumeQty : 0;
+        // // $rbdpoRendementPercentage = $rbdpoRendement * 100;
+
+        // $pfadQty = $costingHppController->getTotalQty($laporanProduksi, 'Refinery', 'PFAD (Produksi)');
+        // // $pfadRendement = $cpoConsumeQty != 0 ? $pfadQty / $cpoConsumeQty : 0;
+        // // $pfadRendementPercentage = $pfadRendement * 100;
+        // $rbdpoOlahIV56Qty = $costingHppController->getTotalQty($laporanProduksi['laporanProduksi'], 'Fraksinasi (IV-56)', 'RBDPO (Olah)');
+        // $rbdpoOlahIV57Qty = $costingHppController->getTotalQty($laporanProduksi['laporanProduksi'], 'Fraksinasi (IV-57)', 'RBDPO (Olah)');
+        // $rbdpoOlahIV58Qty = $costingHppController->getTotalQty($laporanProduksi['laporanProduksi'], 'Fraksinasi (IV-58)', 'RBDPO (Olah)');
+        // $rbdpoOlahIV60Qty = $costingHppController->getTotalQty($laporanProduksi['laporanProduksi'], 'Fraksinasi (IV-60)', 'RBDPO (Olah)');
+
+        // $allProductionRefinery = $rbdpoQty + $pfadQty;
+        // $allProductionFraksinasi = $rbdpoOlahIV56Qty + $rbdpoOlahIV57Qty+$rbdpoOlahIV58Qty+$rbdpoOlahIV60Qty;
+
+        // $production = [
+        //     'allProduction' => [
+        //         [
+        //             'nama' => 'Refinery',
+        //             'value' => $allProductionRefinery,
+        //         ],
+        //         [
+        //             'nama' => 'Fraksinasi',
+        //             'item' => [
+        //                 [
+        //                     'name' => 'Steam / Gas',
+        //                     'qty' => $fractionationAllocationGas,
+        //                     'percentage' => $percentageFractionationGas * 100
+        //                 ],
+        //                 [
+        //                     'name' => 'Air',
+        //                     'qty' => $fractionationAllocationAir,
+        //                     'percentage' => $percentageFractionationAir * 100
+        //                 ],
+        //                 [
+        //                     'name' => 'Listrik',
+        //                     'qty' => $fractionationAllocationListrik,
+        //                     'percentage' => $percentageFractionationListrik * 100
+        //                 ]
+        //             ]
+        //         ]
+        //     ]
+        // ];
+
 
         return [
             'settings' => $settings,
@@ -818,6 +863,7 @@ class LaporanProduksiController extends Controller
                 'Listrik' => $allocationPower
             ],
             'alokasiBiaya' => $alokasiBiaya,
+            'biayaPenyusutan' => $biayaPenyusutanUnit,
             'message' => $this->messageAll
         ];
     }

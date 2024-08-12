@@ -26,7 +26,7 @@ class ProcostController extends Controller
     {
         try {
 
-            $processResult = $this->processIndexDate($request);
+            $processResult = $this->processIndexDateProCost($request);
 
             if ($processResult['error']) {
                 return $processResult['response'];
@@ -44,7 +44,7 @@ class ProcostController extends Controller
         }
     }
 
-    public function processIndexDate(Request $request)
+    public function processIndexDateProCost(Request $request)
     {
         $tanggal = $request->tanggal;
 
@@ -173,7 +173,7 @@ class ProcostController extends Controller
     }
 
     public function generateProduksiFraksinasiIV60($costingHppController, $laporanProduksi, $averages){
-        $rbdpoOlahIV60Qty = $costingHppController->getTotalQty($laporanProduksi['laporanProduksi'], 'Fraksinasi (IV-56)', 'RBDPO (Olah)');
+        $rbdpoOlahIV60Qty = $costingHppController->getTotalQty($laporanProduksi['laporanProduksi'], 'Fraksinasi (IV-60)', 'RBDPO (Olah)');
 
         $rbdOleinIv60Qty = $costingHppController->getTotalQty($laporanProduksi['laporanProduksi'], 'Fraksinasi (IV-60)', 'RBD Olein IV 60 (Produksi)');
         $rbdOleinIv60Rendement = $rbdOleinIv60Qty != 0 ? $rbdOleinIv60Qty / $rbdpoOlahIV60Qty : 0;
@@ -260,7 +260,7 @@ class ProcostController extends Controller
     }
 
     public function generateProduksiFraksinasiIV58($costingHppController, $laporanProduksi, $averages){
-        $rbdpoOlahIV58Qty = $costingHppController->getTotalQty($laporanProduksi['laporanProduksi'], 'Fraksinasi (IV-56)', 'RBDPO (Olah)');
+        $rbdpoOlahIV58Qty = $costingHppController->getTotalQty($laporanProduksi['laporanProduksi'], 'Fraksinasi (IV-58)', 'RBDPO (Olah)');
 
         $rbdOleinIv58Qty = $costingHppController->getTotalQty($laporanProduksi['laporanProduksi'], 'Fraksinasi (IV-58)', 'RBD Olein IV 58 (Produksi)');
         $rbdOleinIv58Rendement = $rbdOleinIv58Qty != 0 ? $rbdOleinIv58Qty / $rbdpoOlahIV58Qty : 0;
@@ -347,7 +347,7 @@ class ProcostController extends Controller
     }
 
     public function generateProduksiFraksinasiIV57($costingHppController, $laporanProduksi, $averages){
-        $rbdpoOlahIV57Qty = $costingHppController->getTotalQty($laporanProduksi['laporanProduksi'], 'Fraksinasi (IV-56)', 'RBDPO (Olah)');
+        $rbdpoOlahIV57Qty = $costingHppController->getTotalQty($laporanProduksi['laporanProduksi'], 'Fraksinasi (IV-57)', 'RBDPO (Olah)');
 
         $rbdOleinIv57Qty = $costingHppController->getTotalQty($laporanProduksi['laporanProduksi'], 'Fraksinasi (IV-57)', 'RBD Olein IV 57 (Produksi)');
         $rbdOleinIv57Rendement = $rbdOleinIv57Qty != 0 ? $rbdOleinIv57Qty / $rbdpoOlahIV57Qty : 0;

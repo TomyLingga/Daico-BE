@@ -37,7 +37,7 @@ class CostProdController extends Controller
     }
 
 
-    private function processIndexPeriod(Request $request, $settingIds)
+    public function processIndexPeriod(Request $request, $settingIds)
     {
         $tanggal = Carbon::parse($request->tanggal);
         $debe = Debe::with('cat3', 'mReport', 'cCentre', 'plant', 'allocation')->get();
