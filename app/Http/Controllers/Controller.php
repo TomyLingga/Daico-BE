@@ -1771,7 +1771,7 @@ class Controller extends BaseController
 
         $dataDirect = $this->processGeneralLedger($request, $settingDirectIds);
         $dataInDirect = $this->processGeneralLedger($request, $settingInDirectIds);
-        dd($dataDirect);
+        // dd($dataDirect);
         $directCost = $this->generateCostOutput('Refinery', $dataDirect, $cpoConsumeQty);
         $inDirectCost = $this->generateCostOutput('Refinery', $dataInDirect, $cpoConsumeQty);
 
