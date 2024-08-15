@@ -240,6 +240,26 @@ class InitialSupplyController extends Controller
     public function indexDate(Request $request)
     {
         try {
+            $data = $this->avgPrice($request);
+
+            return response()->json([
+                'data' => $data,
+                'message' => $this->messageAll
+            ], 200);
+
+        } catch (QueryException $e) {
+            return response()->json([
+                'message' => $this->messageFail,
+                'err' => $e->getTrace()[0],
+                'errMsg' => $e->getMessage(),
+                'success' => false,
+            ], 500);
+        }
+    }
+
+    public function indexRecap(Request $request)
+    {
+        try {
             $data = $this->processAvgPrice($request);
 
             return response()->json([

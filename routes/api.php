@@ -149,6 +149,7 @@ Route::get('retail/get/{id}', [App\Http\Controllers\Api\Config\MasterRetailContr
 Route::get('initial-supply', [App\Http\Controllers\Api\AvgPrice\InitialSupplyController::class, 'index']);
 Route::get('initial-supply/get/{id}', [App\Http\Controllers\Api\AvgPrice\InitialSupplyController::class, 'show']);
 Route::post('initial-supply/date', [App\Http\Controllers\Api\AvgPrice\InitialSupplyController::class, 'indexDate']);
+Route::post('initial-supply/recap', [App\Http\Controllers\Api\AvgPrice\InitialSupplyController::class, 'indexRecap']);
 
 //Location
 Route::get('location', [App\Http\Controllers\Api\Config\LocationController::class, 'index']);

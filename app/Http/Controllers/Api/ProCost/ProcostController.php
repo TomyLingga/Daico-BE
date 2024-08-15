@@ -28,11 +28,10 @@ class ProcostController extends Controller
 
             $processResult = $this->processProCost($request);
 
-            if ($processResult['error']) {
-                return $processResult['response'];
-            }
-
-            return response()->json($processResult['data'], 200);
+            return response()->json([
+                'data' => $processResult['data'],
+                'message' => $this->messageAll
+            ], 200);
 
         } catch (QueryException $e) {
             return response()->json([

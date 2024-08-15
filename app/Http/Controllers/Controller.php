@@ -147,7 +147,6 @@ class Controller extends BaseController
 
     public function formatLogs($logs)
     {
-        // dd($logs);
         return $logs->map(function ($log) {
             $user = $this->getUserById($log->user_id);
             $oldData = json_decode($log->old_data, true);
@@ -372,6 +371,8 @@ class Controller extends BaseController
         $totalQtyRBDPO = $avgPrice['qtyBebanProduksi']['rbdpo'] ?? 0;
         $refineryAllProduction = $totalQtyPFAD + $totalQtyRBDPO;
 
+
+
         $fraksinasiTypes = [
             'Fraksinasi (IV-56)' => 0,
             'Fraksinasi (IV-57)' => 0,
@@ -403,15 +404,19 @@ class Controller extends BaseController
 
         $packagingAllProduction = $productionPackaging56 + $productionPackaging57 + $productionPackaging58 + $productionPackaging60;
 
-        $fraksinasiAllProduction = $productionFraksinasi56 + $productionFraksinasi57 + $productionFraksinasi58 + $productionFraksinasi60 - $packagingAllProduction;
+        $fraksinasiAllProduction = $productionFraksinasi56 + $productionFraksinasi57 + $productionFraksinasi58 + $productionFraksinasi60;
+        $fraksinasiMinusPackagingAllProduction = $productionFraksinasi56 + $productionFraksinasi57 + $productionFraksinasi58 + $productionFraksinasi60 - $packagingAllProduction;
 
-        $totalAllProduction = $refineryAllProduction + $packagingAllProduction + $fraksinasiAllProduction;
+        $totalAllProduction = $refineryAllProduction + $packagingAllProduction + $fraksinasiMinusPackagingAllProduction;
 
         $refineryAllProductionPercentage = $totalAllProduction ? ($refineryAllProduction / $totalAllProduction) * 100 : 0;
-        $fraksinasiAllProductionPercentage = $totalAllProduction ? ($fraksinasiAllProduction / $totalAllProduction) * 100 : 0;
+        $fraksinasiMinusPackagingAllProductionPercentage = $totalAllProduction ? ($fraksinasiMinusPackagingAllProduction / $totalAllProduction) * 100 : 0;
         $packagingAllProductionPercentage = $totalAllProduction ? ($packagingAllProduction / $totalAllProduction) * 100 : 0;
 
-        $totalAllProductionPercentage = $refineryAllProductionPercentage + $fraksinasiAllProductionPercentage + $packagingAllProductionPercentage;
+        $totalAllProductionPercentage = $refineryAllProductionPercentage + $fraksinasiMinusPackagingAllProductionPercentage + $packagingAllProductionPercentage;
+
+        $packagingTotalProduction = $packagingAllProduction;
+        $fraksinasiTotalProduction = $fraksinasiAllProduction;
 
         $totalProductionResult = [
             'totalAllProduction' => $totalAllProduction,
@@ -425,8 +430,8 @@ class Controller extends BaseController
                 ],
                 [
                     'name' => 'Fraksinasi',
-                    'total' => $fraksinasiAllProduction,
-                    'percentage' => $fraksinasiAllProductionPercentage,
+                    'total' => $fraksinasiMinusPackagingAllProduction,
+                    'percentage' => $fraksinasiMinusPackagingAllProductionPercentage,
                     'items' => [
                         [
                             'name' => 'RBD Olein IV-56',
@@ -473,7 +478,7 @@ class Controller extends BaseController
         ];
 
         $auxiliaryPercentageRefinery = $refineryAllProductionPercentage;
-        $auxiliaryPercentageFraksinasi = $fraksinasiAllProductionPercentage;
+        $auxiliaryPercentageFraksinasi = $fraksinasiMinusPackagingAllProductionPercentage;
         $auxiliaryPercentagePackaging = $packagingAllProductionPercentage;
 
         $refineryPenyusutanUnitQty = 0;
@@ -629,12 +634,102 @@ class Controller extends BaseController
             ]
         ];
 
+        $percentage56Packaging = $packagingTotalProduction ? ($productionPackaging56 / $packagingTotalProduction) * 100 : 0;
+        $percentage57Packaging = $packagingTotalProduction ? ($productionPackaging57 / $packagingTotalProduction) * 100 : 0;
+        $percentage58Packaging = $packagingTotalProduction ? ($productionPackaging58 / $packagingTotalProduction) * 100 : 0;
+        $percentage60Packaging = $packagingTotalProduction ? ($productionPackaging60 / $packagingTotalProduction) * 100 : 0;
+        $totalPercentagePackaging = $percentage56Packaging + $percentage57Packaging + $percentage58Packaging + $percentage60Packaging;
+
+        $percentage56Fraksinasi = $fraksinasiTotalProduction ? ($productionFraksinasi56 / $fraksinasiTotalProduction) * 100 : 0;
+        $percentage57Fraksinasi = $fraksinasiTotalProduction ? ($productionFraksinasi57 / $fraksinasiTotalProduction) * 100 : 0;
+        $percentage58Fraksinasi = $fraksinasiTotalProduction ? ($productionFraksinasi58 / $fraksinasiTotalProduction) * 100 : 0;
+        $percentage60Fraksinasi = $fraksinasiTotalProduction ? ($productionFraksinasi60 / $fraksinasiTotalProduction) * 100 : 0;
+        $totalPercentageFraksinasi = $percentage56Fraksinasi + $percentage57Fraksinasi + $percentage58Fraksinasi + $percentage60Fraksinasi;
+
+        $packagingNFraksinasi = [
+            'production' => [
+                [
+                    'name' => 'Fraksinasi',
+                    'totalpercentage' => $totalPercentageFraksinasi,
+                    'items' => [
+                        [
+                            'name' => 'RBD Olein IV-56',
+                            'percentage' => $percentage56Fraksinasi,
+                        ],
+                        [
+                            'name' => 'RBD Olein IV-57',
+                            'percentage' => $percentage57Fraksinasi,
+                        ],
+                        [
+                            'name' => 'RBD Olein IV-58',
+                            'percentage' => $percentage58Fraksinasi,
+                        ],
+                        [
+                            'name' => 'RBD Olein IV-60',
+                            'percentage' => $percentage60Fraksinasi,
+                        ],
+                    ],
+                ],
+                [
+                    'name' => 'Packaging',
+                    'totalpercentage' => $totalPercentagePackaging,
+                    'items' => [
+                        [
+                            'name' => 'RBD Olein IV-56',
+                            'percentage' => $percentage56Packaging,
+                        ],
+                        [
+                            'name' => 'RBD Olein IV-57',
+                            'percentage' => $percentage57Packaging,
+                        ],
+                        [
+                            'name' => 'RBD Olein IV-58',
+                            'percentage' => $percentage58Packaging,
+                        ],
+                        [
+                            'name' => 'RBD Olein IV-60',
+                            'percentage' => $percentage60Packaging,
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $produksiAllValue = $refineryAllProduction + $fraksinasiTotalProduction;
+        $produksiAllRefineryPercent = $produksiAllValue ? ($refineryAllProduction / $produksiAllValue) * 100 : 0;
+        $produksiAllFraksinasiPercent = $produksiAllValue ? ($fraksinasiTotalProduction / $produksiAllValue) * 100 : 0;
+        $produksiAllPercent = $produksiAllRefineryPercent + $produksiAllFraksinasiPercent;
+
+        $produksiAll = [
+            'production' => [
+                [
+                    'name' => 'Produksi All',
+                    'totalValue' => $produksiAllValue,
+                    'totalPercentage' => $produksiAllPercent,
+                    'items' => [
+                        [
+                            'name' => 'Refinery',
+                            'value' => $refineryAllProduction,
+                            'percentage' => $produksiAllRefineryPercent,
+                        ],
+                        [
+                            'name' => 'Fraksinasi',
+                            'value' => $fraksinasiTotalProduction,
+                            'percentage' => $produksiAllFraksinasiPercent,
+                        ]
+                    ],
+                ],
+            ],
+        ];
+
         return [
             'recap' => $recap,
             'biayaPenyusutanUnit' => $biayaPenyusutanUnit,
             'biayaPenyusutanAuxiliary' => $biayaPenyusutanAuxiliary,
             'biayaPenyusutanAllocation' => $biayaPenyusutanAllocation,
             'totalProduction' => $totalProductionResult,
+            'packagingNFraksinasi' => $packagingNFraksinasi,
+            'produksiAll' => $produksiAll,
         ];
     }
 
@@ -1108,9 +1203,7 @@ class Controller extends BaseController
         })->values();
 
         $averages = $this->calculateAverages($data['averageMarketValue']);
-        // dd($averages);
         $laporanProduksi = $this->processRecapData($request);
-        // dd($laporanProduksi);
 
         $produksiRefineryData = $this->generateProduksiRefinery($laporanProduksi, $averages);
         $produksiFraksinasiIV56Data = $this->generateProduksiFraksinasiIV56($laporanProduksi, $averages);
@@ -1748,12 +1841,12 @@ class Controller extends BaseController
 
     public function costingHpp($request)
     {
-        $laporanProduksi = $this->processRecapData($request);
         $proCost = $this->processProCost($request);
+        $laporanProduksi = $this->processPenyusutan($request);
 
-        $cpoConsumeQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'Refinery', 'CPO (Olah)');
-        $rbdpoQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'Refinery', 'RBDPO (Produksi)');
-        $pfadQty = $this->getTotalQty($laporanProduksi['laporanProduksi'], 'Refinery', 'PFAD (Produksi)');
+        $cpoConsumeQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Refinery', 'CPO (Olah)');
+        $rbdpoQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Refinery', 'RBDPO (Produksi)');
+        $pfadQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Refinery', 'PFAD (Produksi)');
 
         $rbdpoRendementPercentage = $this->calculatePercentage($rbdpoQty, $cpoConsumeQty);
         $pfadRendementPercentage = $this->calculatePercentage($pfadQty, $cpoConsumeQty);
@@ -1771,35 +1864,123 @@ class Controller extends BaseController
 
         $dataDirect = $this->processGeneralLedger($request, $settingDirectIds);
         $dataInDirect = $this->processGeneralLedger($request, $settingInDirectIds);
-        // dd($dataDirect);
+
         $directCost = $this->generateCostOutput('Refinery', $dataDirect, $cpoConsumeQty);
         $inDirectCost = $this->generateCostOutput('Refinery', $dataInDirect, $cpoConsumeQty);
 
-        $alokasiBiaya = $laporanProduksi['alokasiBiaya']['allocation'];
+        $alokasiBiaya = $laporanProduksi['recap']['alokasiBiaya']['allocation'];
 
-        $refineryData = array_filter($alokasiBiaya, function($allocation) {
-            return $allocation['nama'] === 'Refinery';
-        });
+        $alokasiRefineryGasQty = $alokasiRefineryGasPercentage = 0;
+        $alokasiRefineryAirQty = $alokasiRefineryAirPercentage = 0;
+        $alokasiRefineryListrikQty = $alokasiRefineryListrikPercentage = 0;
 
-        $fraksinasiData = array_filter($alokasiBiaya, function($allocation) {
-            return $allocation['nama'] === 'Fraksinasi';
-        });
+        $alokasiFraksinasiGasQty = $alokasiFraksinasiGasPercentage = 0;
+        $alokasiFraksinasiAirQty = $alokasiFraksinasiAirPercentage = 0;
+        $alokasiFraksinasiListrikQty = $alokasiFraksinasiListrikPercentage = 0;
 
-        $refineryData = array_values($refineryData);
-        $fraksinasiData = array_values($fraksinasiData);
-
-        $refineryData = $refineryData[0];
-        $fraksinasiData = $fraksinasiData[0];
-
-        $percentagesRefinery = [];
-        foreach ($refineryData['item'] as $item) {
-            $percentagesRefinery[$item['name']] = $item['percentage'];
+        foreach ($alokasiBiaya as $alokasi) {
+            if ($alokasi['nama'] === "Refinery") {
+                foreach ($alokasi['item'] as $item) {
+                    switch ($item['name']) {
+                        case "Steam / Gas":
+                            $alokasiRefineryGasQty = $item['qty'];
+                            $alokasiRefineryGasPercentage = $item['percentage'];
+                            break;
+                        case "Air":
+                            $alokasiRefineryAirQty = $item['qty'];
+                            $alokasiRefineryAirPercentage = $item['percentage'];
+                            break;
+                        case "Listrik":
+                            $alokasiRefineryListrikQty = $item['qty'];
+                            $alokasiRefineryListrikPercentage = $item['percentage'];
+                            break;
+                    }
+                }
+            } elseif ($alokasi['nama'] === "Fraksinasi") {
+                foreach ($alokasi['item'] as $item) {
+                    switch ($item['name']) {
+                        case "Steam / Gas":
+                            $alokasiFraksinasiGasQty = $item['qty'];
+                            $alokasiFraksinasiGasPercentage = $item['percentage'];
+                            break;
+                        case "Air":
+                            $alokasiFraksinasiAirQty = $item['qty'];
+                            $alokasiFraksinasiAirPercentage = $item['percentage'];
+                            break;
+                        case "Listrik":
+                            $alokasiFraksinasiListrikQty = $item['qty'];
+                            $alokasiFraksinasiListrikPercentage = $item['percentage'];
+                            break;
+                    }
+                }
+            }
         }
 
-        $percentagesFraksinasi = [];
-        foreach ($fraksinasiData['item'] as $item) {
-            $percentagesFraksinasi[$item['name']] = $item['percentage'];
+        $produksiAll = $laporanProduksi['produksiAll'];
+        $produksiAllRefineryPercentage = 0;
+        $produksiAllFraksinasiPercentage = 0;
+
+        // Check if 'production' exists and contains items
+        if (isset($produksiAll['production']) && is_array($produksiAll['production'])) {
+            foreach ($produksiAll['production'] as $production) {
+                if (isset($production['items']) && is_array($production['items'])) {
+                    foreach ($production['items'] as $item) {
+                        // Check the name of each item and store the corresponding percentage
+                        if ($item['name'] === 'Refinery') {
+                            $produksiAllRefineryPercentage = $item['percentage'];
+                        } elseif ($item['name'] === 'Fraksinasi') {
+                            $produksiAllFraksinasiPercentage = $item['percentage'];
+                        }
+                    }
+                }
+            }
         }
+
+        $penyusutanAllocation = $laporanProduksi['biayaPenyusutanAllocation'];
+        $penyusutanAllocationRefineryPercentage = 0;
+        $penyusutanAllocationFraksinasiPercentage = 0;
+
+        // Loop through the 'columns' array
+        foreach ($penyusutanAllocation['columns'] as $column) {
+            // Check if the column name is "%"
+            if ($column['name'] === '%') {
+                // Loop through the 'alokasi' array to find Refinery and Fraksinasi
+                foreach ($column['alokasi'] as $alokasi) {
+                    if ($alokasi['name'] === 'Refinery') {
+                        $penyusutanAllocationRefineryPercentage = $alokasi['value'];
+                    } elseif ($alokasi['name'] === 'Fraksinasi') {
+                        $penyusutanAllocationFraksinasiPercentage = $alokasi['value'];
+                    }
+                }
+            }
+        }
+        // dd($proCost);
+
+        $proporsiBiayaPercentage = [];
+        // Loop through the 'produksiRefineryData' array
+        foreach ($proCost['data']['produksiRefineryData']['data'] as $data) {
+            // Check if the 'nama' is "Proporsi biaya (%)"
+            if ($data['nama'] === 'Proporsi biaya (%)') {
+                // Loop through the 'item' array to get each percentage value
+                foreach ($data['item'] as $item) {
+                    // Store the name and value in the result array
+                    $proporsiBiayaPercentage[$item['name']] = $item['value'];
+                }
+            }
+        }
+
+        // Now you have the percentage values in the $proporsiBiayaPercentage array
+        // dd($proporsiBiayaPercentage);
+        $bahanBakarProportionRefinery = $alokasiRefineryGasPercentage;
+        $othersProportionRefinery = $produksiAllRefineryPercentage;
+        $analisaLabProportionRefinery = $produksiAllRefineryPercentage;
+        $listrikProportionRefinery = $alokasiRefineryListrikPercentage;
+        $airProportionRefinery = $alokasiRefineryAirPercentage;
+        $gajiPimpinanProportionRefinery = $produksiAllRefineryPercentage;
+        $gajiPelaksanaProportionRefinery = $produksiAllRefineryPercentage;
+        $asuransiPabrikProportionRefinery = $produksiAllRefineryPercentage;
+        $bengkelProportionRefinery = $produksiAllRefineryPercentage;
+        $depresiasiProportionRefinery = $penyusutanAllocationRefineryPercentage;
 
         return [
             'data' => [
@@ -1956,11 +2137,9 @@ class Controller extends BaseController
         return ['data' => $data->values()];
     }
 
-    public function processAvgPrice(Request $request)
-    {
+    public function avgPrice(Request $request){
         $tanggal = $request->tanggal;
 
-        // Fetch persediaanAwal data
         $persediaanAwal = InitialSupply::with('productable')
             ->whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
             ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
@@ -1975,11 +2154,40 @@ class Controller extends BaseController
             return response()->json(['message' => $this->messageMissing], 401);
         }
 
-        // Process additional data
+        $totalQty = $persediaanAwal->sum('qty');
+        $totalJumlah = $persediaanAwal->sum(function ($item) {
+            return $item->qty * $item->harga;
+        });
+        $totalHarga = $totalJumlah/$totalQty;
+
+        $transformedPersediaanAwal = $persediaanAwal->map(function ($item) {
+            return [
+                'id' => $item->extended_productable['id'],
+                'product_id' => $item->extended_productable['product_id'] ?? null,
+                'nama' => $item->extended_productable['nama'] ?? $item->extended_productable['name'],
+                'product' => $item->extended_productable['product'] ?? null,
+                'tanggal' => $item->tanggal,
+                'qty' => $item->qty,
+                'harga' => $item->harga,
+                'jumlah' => $item->qty * $item->harga,
+            ];
+        });
+
+        return [
+            'totalQty' => $totalQty,
+            'totalHarga' => $totalHarga,
+            'totalJumlah' => $totalJumlah,
+            'items' => $transformedPersediaanAwal,
+            ];
+    }
+
+    public function processAvgPrice(Request $request)
+    {
+        $persediaanAwal = $this->avgPrice($request);
+
         $detAlloc = $this->processRecapData($request);
         $proCost = $this->processProCost($request);
 
-        // Initialize extractedData array
         $extractedData = [
             'refinery' => [],
             'fraksinasi_iv56' => [],
@@ -1988,7 +2196,6 @@ class Controller extends BaseController
             'fraksinasi_iv60' => [],
         ];
 
-        // Function to extract values
         $extractValues = function ($data, $groupName) use (&$extractedData) {
             foreach ($data as $group) {
                 foreach ($group['item'] as $item) {
@@ -1997,21 +2204,18 @@ class Controller extends BaseController
             }
         };
 
-        // Extract values from production cost data
         $extractValues($proCost['data']['produksiRefineryData']['data'], 'refinery');
         $extractValues($proCost['data']['produksiFraksinasiIV56Data']['data'], 'fraksinasi_iv56');
         $extractValues($proCost['data']['produksiFraksinasiIV57Data']['data'], 'fraksinasi_iv57');
         $extractValues($proCost['data']['produksiFraksinasiIV58Data']['data'], 'fraksinasi_iv58');
         $extractValues($proCost['data']['produksiFraksinasiIV60Data']['data'], 'fraksinasi_iv60');
 
-        // Initialize quantities
         $totalQtyOleinIV56Consume = 0;
         $totalQtyOleinIV57Consume = 0;
         $totalQtyOleinIV58Consume = 0;
         $totalQtyOleinIV60NusakitaConsume = 0;
         $totalQtyOleinIV60SalvacoConsume = 0;
 
-        // Calculate total quantities
         foreach ($detAlloc['laporanProduksi'] as $production) {
             foreach ($production['uraian'] as $uraian) {
                 if ($uraian['nama'] === 'Olein IV 56 Consume') {
@@ -2045,34 +2249,8 @@ class Controller extends BaseController
                                     ($extractedData['fraksinasi_iv57']['Produksi Fraksinasi IV-57']['RBDStearin'] ?? 0) +
                                     ($extractedData['fraksinasi_iv58']['Produksi Fraksinasi IV-58']['RBDStearin'] ?? 0) +
                                     ($extractedData['fraksinasi_iv60']['Produksi Fraksinasi IV-60']['RBDStearin'] ?? 0);
-
-        $totalQty = $persediaanAwal->sum('qty');
-        $totalJumlah = $persediaanAwal->sum(function ($item) {
-            return $item->qty * $item->harga;
-        });
-        $totalHarga = $totalJumlah/$totalQty;
-
-        // Transform persediaanAwal data
-        $transformedPersediaanAwal = $persediaanAwal->map(function ($item) {
-            return [
-                'id' => $item->extended_productable['id'],
-                'product_id' => $item->extended_productable['product_id'] ?? null,
-                'nama' => $item->extended_productable['nama'] ?? $item->extended_productable['name'],
-                'product' => $item->extended_productable['product'] ?? null,
-                'tanggal' => $item->tanggal,
-                'qty' => $item->qty,
-                'harga' => $item->harga,
-                'jumlah' => $item->qty * $item->harga,
-            ];
-        });
-
         return[
-            'persediaanAwal' => [
-                'totalQty' => $totalQty,
-                'totalHarga' => $totalHarga,
-                'totalJumlah' => $totalJumlah,
-                'items' => $transformedPersediaanAwal,
-            ],
+            'persediaanAwal' => $persediaanAwal,
             'qtyBebanProduksi' => [
                 'pfad' => $qtyBebanProdPFAD,
                 'rbdpo' => $qtyBebanProdRBDPO,
@@ -2089,6 +2267,5 @@ class Controller extends BaseController
             ]
         ];
     }
-
 
 }

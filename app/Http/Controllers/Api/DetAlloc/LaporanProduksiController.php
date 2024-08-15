@@ -195,7 +195,7 @@ class LaporanProduksiController extends Controller
     public function indexDate(Request $request)
     {
         try {
-            $laporanProduksi = $this->index($request);
+            $laporanProduksi = $this->indexLaporanProduksi($request);
 
             return response()->json([
                 'laporanProduksi' => $laporanProduksi['laporanProduksi'],
