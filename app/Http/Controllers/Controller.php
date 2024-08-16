@@ -1839,175 +1839,29 @@ class Controller extends BaseController
         });
     }
 
-    public function costingHpp($request)
+    public function generateCostOutput($categoryName, $data, $totalQty, $proportionData = [])
     {
-        $proCost = $this->processProCost($request);
-        $laporanProduksi = $this->processPenyusutan($request);
-
-        $cpoConsumeQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Refinery', 'CPO (Olah)');
-        $rbdpoQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Refinery', 'RBDPO (Produksi)');
-        $pfadQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Refinery', 'PFAD (Produksi)');
-
-        $rbdpoRendementPercentage = $this->calculatePercentage($rbdpoQty, $cpoConsumeQty);
-        $pfadRendementPercentage = $this->calculatePercentage($pfadQty, $cpoConsumeQty);
-
-        $settingDirectIds = $this->getSettingIds([
-            'coa_bahan_baku', 'coa_bahan_bakar', 'coa_bleaching_earth',
-            'coa_phosporic_acid', 'coa_others','coa_analisa_lab',
-            'coa_listrik', 'coa_air'
-        ]);
-
-        $settingInDirectIds = $this->getSettingIds([
-            'coa_gaji_tunjangan_sosial_pimpinan', 'coa_gaji_tunjangan_sosial_pelaksana',
-            'coa_asuransi_pabrik', 'coa_limbah_pihak3', 'coa_bengkel_pemeliharaan', 'coa_depresiasi'
-        ]);
-
-        $dataDirect = $this->processGeneralLedger($request, $settingDirectIds);
-        $dataInDirect = $this->processGeneralLedger($request, $settingInDirectIds);
-
-        $directCost = $this->generateCostOutput('Refinery', $dataDirect, $cpoConsumeQty);
-        $inDirectCost = $this->generateCostOutput('Refinery', $dataInDirect, $cpoConsumeQty);
-
-        $alokasiBiaya = $laporanProduksi['recap']['alokasiBiaya']['allocation'];
-
-        $alokasiRefineryGasQty = $alokasiRefineryGasPercentage = 0;
-        $alokasiRefineryAirQty = $alokasiRefineryAirPercentage = 0;
-        $alokasiRefineryListrikQty = $alokasiRefineryListrikPercentage = 0;
-
-        $alokasiFraksinasiGasQty = $alokasiFraksinasiGasPercentage = 0;
-        $alokasiFraksinasiAirQty = $alokasiFraksinasiAirPercentage = 0;
-        $alokasiFraksinasiListrikQty = $alokasiFraksinasiListrikPercentage = 0;
-
-        foreach ($alokasiBiaya as $alokasi) {
-            if ($alokasi['nama'] === "Refinery") {
-                foreach ($alokasi['item'] as $item) {
-                    switch ($item['name']) {
-                        case "Steam / Gas":
-                            $alokasiRefineryGasQty = $item['qty'];
-                            $alokasiRefineryGasPercentage = $item['percentage'];
-                            break;
-                        case "Air":
-                            $alokasiRefineryAirQty = $item['qty'];
-                            $alokasiRefineryAirPercentage = $item['percentage'];
-                            break;
-                        case "Listrik":
-                            $alokasiRefineryListrikQty = $item['qty'];
-                            $alokasiRefineryListrikPercentage = $item['percentage'];
-                            break;
-                    }
-                }
-            } elseif ($alokasi['nama'] === "Fraksinasi") {
-                foreach ($alokasi['item'] as $item) {
-                    switch ($item['name']) {
-                        case "Steam / Gas":
-                            $alokasiFraksinasiGasQty = $item['qty'];
-                            $alokasiFraksinasiGasPercentage = $item['percentage'];
-                            break;
-                        case "Air":
-                            $alokasiFraksinasiAirQty = $item['qty'];
-                            $alokasiFraksinasiAirPercentage = $item['percentage'];
-                            break;
-                        case "Listrik":
-                            $alokasiFraksinasiListrikQty = $item['qty'];
-                            $alokasiFraksinasiListrikPercentage = $item['percentage'];
-                            break;
-                    }
+        $totalValue = 0;
+        $items = array_map(function($dataItem) use ($totalQty, $proportionData, &$totalValue) {
+            $proportion = 100;
+            foreach ($proportionData as $proportionItem) {
+                if ($proportionItem['nama'] === $dataItem['nama']) {
+                    $proportion = $proportionItem['proportion'];
+                    break;
                 }
             }
-        }
 
-        $produksiAll = $laporanProduksi['produksiAll'];
-        $produksiAllRefineryPercentage = 0;
-        $produksiAllFraksinasiPercentage = 0;
+            $itemTotalValue = $dataItem['result'] * ($proportion / 100);
+            $totalValue += $itemTotalValue;
 
-        // Check if 'production' exists and contains items
-        if (isset($produksiAll['production']) && is_array($produksiAll['production'])) {
-            foreach ($produksiAll['production'] as $production) {
-                if (isset($production['items']) && is_array($production['items'])) {
-                    foreach ($production['items'] as $item) {
-                        // Check the name of each item and store the corresponding percentage
-                        if ($item['name'] === 'Refinery') {
-                            $produksiAllRefineryPercentage = $item['percentage'];
-                        } elseif ($item['name'] === 'Fraksinasi') {
-                            $produksiAllFraksinasiPercentage = $item['percentage'];
-                        }
-                    }
-                }
-            }
-        }
-
-        $penyusutanAllocation = $laporanProduksi['biayaPenyusutanAllocation'];
-        $penyusutanAllocationRefineryPercentage = 0;
-        $penyusutanAllocationFraksinasiPercentage = 0;
-
-        // Loop through the 'columns' array
-        foreach ($penyusutanAllocation['columns'] as $column) {
-            // Check if the column name is "%"
-            if ($column['name'] === '%') {
-                // Loop through the 'alokasi' array to find Refinery and Fraksinasi
-                foreach ($column['alokasi'] as $alokasi) {
-                    if ($alokasi['name'] === 'Refinery') {
-                        $penyusutanAllocationRefineryPercentage = $alokasi['value'];
-                    } elseif ($alokasi['name'] === 'Fraksinasi') {
-                        $penyusutanAllocationFraksinasiPercentage = $alokasi['value'];
-                    }
-                }
-            }
-        }
-        // dd($proCost);
-
-        $proporsiBiayaPercentage = [];
-        // Loop through the 'produksiRefineryData' array
-        foreach ($proCost['data']['produksiRefineryData']['data'] as $data) {
-            // Check if the 'nama' is "Proporsi biaya (%)"
-            if ($data['nama'] === 'Proporsi biaya (%)') {
-                // Loop through the 'item' array to get each percentage value
-                foreach ($data['item'] as $item) {
-                    // Store the name and value in the result array
-                    $proporsiBiayaPercentage[$item['name']] = $item['value'];
-                }
-            }
-        }
-
-        // Now you have the percentage values in the $proporsiBiayaPercentage array
-        // dd($proporsiBiayaPercentage);
-        $bahanBakarProportionRefinery = $alokasiRefineryGasPercentage;
-        $othersProportionRefinery = $produksiAllRefineryPercentage;
-        $analisaLabProportionRefinery = $produksiAllRefineryPercentage;
-        $listrikProportionRefinery = $alokasiRefineryListrikPercentage;
-        $airProportionRefinery = $alokasiRefineryAirPercentage;
-        $gajiPimpinanProportionRefinery = $produksiAllRefineryPercentage;
-        $gajiPelaksanaProportionRefinery = $produksiAllRefineryPercentage;
-        $asuransiPabrikProportionRefinery = $produksiAllRefineryPercentage;
-        $bengkelProportionRefinery = $produksiAllRefineryPercentage;
-        $depresiasiProportionRefinery = $penyusutanAllocationRefineryPercentage;
-
-        return [
-            'data' => [
-                'cpoConsume' => $cpoConsumeQty,
-                'rbdpo' => $rbdpoQty,
-                'pfad' => $pfadQty,
-                'rbdpoRendementPercentage' => $rbdpoRendementPercentage,
-                'pfadRendementPercentage' => $pfadRendementPercentage,
-                'dataDirect' => $directCost,
-                'dataInDirect' => $inDirectCost,
-            ]
-        ];
-    }
-
-    private function calculatePercentage($qty, $total)
-    {
-        return $total != 0 ? ($qty / $total) * 100 : 0;
-    }
-
-    private function getSettingIds(array $settingNames)
-    {
-        return Setting::whereIn('setting_name', $settingNames)->pluck('id')->toArray();
-    }
-
-    private function generateCostOutput($categoryName, $data, $totalQty)
-    {
-        $totalValue = array_sum(array_column($data['data']->toArray(), 'result'));
+            return [
+                'name' => $dataItem['nama'],
+                'proportion' => $proportion,
+                'value' => $dataItem['result'],
+                'totalValue' => $itemTotalValue,
+                'rpPerKg' => $totalQty != 0 ? $itemTotalValue / $totalQty : 0,
+            ];
+        }, $data['data']->toArray());
 
         $totalRpPerKg = $totalQty != 0 ? $totalValue / $totalQty : 0;
 
@@ -2017,13 +1871,7 @@ class Controller extends BaseController
                     'nama' => $categoryName,
                     'totalValue' => $totalValue,
                     'totalRpPerKg' => $totalRpPerKg,
-                    'item' => array_map(function($dataItem) use ($totalQty) {
-                        return [
-                            'name' => $dataItem['nama'],
-                            'totalValue' => $dataItem['result'],
-                            'rpPerKg' => $totalQty != 0 ? $dataItem['result'] / $totalQty : 0
-                        ];
-                    }, $data['data']->toArray())
+                    'item' => $items
                 ]
             ]
         ];
@@ -2048,31 +1896,234 @@ class Controller extends BaseController
         return $totalQty;
     }
 
-    public function indexLaporanProduksi(Request $request)
+    public function costingHppRefinery($laporanProduksi, $proCost, $dataDirect, $dataInDirect)
     {
-        $tanggal = Carbon::parse($request->tanggal);
-        $year = $tanggal->year;
-        $month = $tanggal->month;
+        $cpoConsumeQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Refinery', 'CPO (Olah)');
+        $rbdpoQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Refinery', 'RBDPO (Produksi)');
+        $pfadQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Refinery', 'PFAD (Produksi)');
 
-        $data = $this->dataLaporanProduksi($year, $month);
+        $rbdpoRendementPercentage = $cpoConsumeQty != 0 ? ($rbdpoQty / $cpoConsumeQty) * 100 : 0;
+        $pfadRendementPercentage = $cpoConsumeQty != 0 ? ($pfadQty / $cpoConsumeQty) * 100 : 0;
 
-        $settingNames = ['konversi_liter_to_kg', 'pouch_to_box_1_liter', 'pouch_to_box_2_liter', 'konversi_m_liter_to_kg'];
-        $settings = Setting::whereIn('setting_name', $settingNames)->get();
+        $alokasiBiaya = $laporanProduksi['recap']['alokasiBiaya']['allocation'];
 
-        $laporanProduksi = $this->prosesLaporanProd($data);
+        $alokasiCost = [
+            'Refinery' => [
+                'gasQty' => 0, 'gasPercentage' => 0,
+                'airQty' => 0, 'airPercentage' => 0,
+                'listrikQty' => 0, 'listrikPercentage' => 0
+            ],
+            'Fraksinasi' => [
+                'gasQty' => 0, 'gasPercentage' => 0,
+                'airQty' => 0, 'airPercentage' => 0,
+                'listrikQty' => 0, 'listrikPercentage' => 0
+            ]
+        ];
+
+        foreach ($alokasiBiaya as $alokasiItem) {
+            $type = $alokasiItem['nama'];
+            if (isset($alokasiCost[$type])) {
+                foreach ($alokasiItem['item'] as $item) {
+                    switch ($item['name']) {
+                        case "Steam / Gas":
+                            $alokasiCost[$type]['gasQty'] = $item['qty'];
+                            $alokasiCost[$type]['gasPercentage'] = $item['percentage'];
+                            break;
+                        case "Air":
+                            $alokasiCost[$type]['airQty'] = $item['qty'];
+                            $alokasiCost[$type]['airPercentage'] = $item['percentage'];
+                            break;
+                        case "Listrik":
+                            $alokasiCost[$type]['listrikQty'] = $item['qty'];
+                            $alokasiCost[$type]['listrikPercentage'] = $item['percentage'];
+                            break;
+                    }
+                }
+            }
+        }
+
+        $produksiAllRefineryPercentage = 0;
+        // $produksiAllFraksinasiPercentage = 0;
+        // dd($laporanProduksi['produksiAll']);
+        $produksiAll = $laporanProduksi['produksiAll'];
+        if (isset($produksiAll['production']) && is_array($produksiAll['production'])) {
+            foreach ($produksiAll['production'] as $production) {
+                if (isset($production['items']) && is_array($production['items'])) {
+                    foreach ($production['items'] as $item) {
+                        if ($item['name'] === 'Refinery') {
+                            $produksiAllRefineryPercentage = $item['percentage'];
+                        // } elseif ($item['name'] === 'Fraksinasi') {
+                        //     $produksiAllFraksinasiPercentage = $item['percentage'];
+                        }
+                    }
+                }
+            }
+        }
+
+        $penyusutanAllocation = $laporanProduksi['biayaPenyusutanAllocation'];
+        $penyusutanAllocationRefineryPercentage = 0;
+        // $penyusutanAllocationFraksinasiPercentage = 0;
+
+        foreach ($penyusutanAllocation['columns'] as $column) {
+            if ($column['name'] === '%') {
+                foreach ($column['alokasi'] as $alokasi) {
+                    if ($alokasi['name'] === 'Refinery') {
+                        $penyusutanAllocationRefineryPercentage = $alokasi['value'];
+                    // } elseif ($alokasi['name'] === 'Fraksinasi') {
+                    //     $penyusutanAllocationFraksinasiPercentage = $alokasi['value'];
+                    }
+                }
+            }
+        }
+
+        $proporsiBiayaPercentage = [];
+        foreach ($proCost['data']['produksiRefineryData']['data'] as $data) {
+            if ($data['nama'] === 'Proporsi biaya (%)') {
+                foreach ($data['item'] as $item) {
+                    $proporsiBiayaPercentage[$item['name']] = $item['value'];
+                }
+            }
+        }
+
+
+        $bahanBakarProportionRefinery = $alokasiCost['Refinery']['gasPercentage'] ?? 100;
+        $othersProportionRefinery = $produksiAllRefineryPercentage ?? 100;
+        $analisaLabProportionRefinery = $produksiAllRefineryPercentage ?? 100;
+        $listrikProportionRefinery = $alokasiCost['Refinery']['listrikPercentage'] ?? 100;
+        $airProportionRefinery = $alokasiCost['Refinery']['airPercentage'] ?? 100;
+        $gajiPimpinanProportionRefinery = $produksiAllRefineryPercentage ?? 100;
+        $gajiPelaksanaProportionRefinery = $produksiAllRefineryPercentage ?? 100;
+        $asuransiPabrikProportionRefinery = $produksiAllRefineryPercentage ?? 100;
+        $bengkelProportionRefinery = $produksiAllRefineryPercentage ?? 100;
+        $depresiasiProportionRefinery = $penyusutanAllocationRefineryPercentage ?? 100;
+
+        $proportionDirectRefinery = [
+            [
+                'nama' => 'Bahan Bakar',
+                'proportion' => $bahanBakarProportionRefinery,
+            ],
+            [
+                'nama' => 'Others',
+                'proportion' => $othersProportionRefinery,
+            ],
+            [
+                'nama' => 'Biaya Analisa & Laboratorium',
+                'proportion' => $analisaLabProportionRefinery,
+            ],
+            [
+                'nama' => 'Biaya Listrik',
+                'proportion' => $listrikProportionRefinery,
+            ],
+            [
+                'nama' => 'Biaya Air',
+                'proportion' => $airProportionRefinery,
+            ],
+        ];
+
+        $proportionInDirectRefinery = [
+            [
+                'nama' => 'Gaji, Tunjangan & Biaya Sosial Karyawan Pimpinan',
+                'proportion' => $gajiPimpinanProportionRefinery,
+            ],
+            [
+                'nama' => 'Gaji, Tunjangan & Biaya Sosial Karyawan Pelaksana',
+                'proportion' => $gajiPelaksanaProportionRefinery,
+            ],
+            [
+                'nama' => 'Biaya Assuransi Pabrik',
+                'proportion' => $asuransiPabrikProportionRefinery,
+            ],
+            [
+                'nama' => 'Biaya Bengkel & Pemeliharaan',
+                'proportion' => $bengkelProportionRefinery,
+            ],
+            [
+                'nama' => 'Depresiasi',
+                'proportion' => $depresiasiProportionRefinery,
+            ],
+        ];
+
+        $directCost = $this->generateCostOutput('Refinery', $dataDirect, $cpoConsumeQty, $proportionDirectRefinery);
+        $inDirectCost = $this->generateCostOutput('Refinery', $dataInDirect, $cpoConsumeQty, $proportionInDirectRefinery);
+
+        $totalCostRefinery = $directCost['cost'][0]['totalValue'] + $inDirectCost['cost'][0]['totalValue'];
+        $totalRpPerKgRefinery = ($cpoConsumeQty != 0) ? ($totalCostRefinery / $cpoConsumeQty) : 0;
+
+        $rbdpoProportionRefinery = $proporsiBiayaPercentage['RBDPO'] ?? 0;
+        $pfadProportionRefinery = $proporsiBiayaPercentage['PFAD'] ?? 0;
+        $rbdpoTotalValueRefinery = $totalCostRefinery * $rbdpoProportionRefinery / 100;
+        $pfadTotalValueRefinery = $totalCostRefinery * $pfadProportionRefinery / 100;
+        $rbdpoRpPerKgRefinery = ($rbdpoQty != 0) ? ($rbdpoTotalValueRefinery / $rbdpoQty) : 0;
+        $pfadRpPerKgRefinery = ($pfadQty != 0) ? ($pfadTotalValueRefinery / $pfadQty) : 0;
+
+        $allocationCostRefinery = [
+            [
+                'nama' => 'RBDPO',
+                'proportion' => $rbdpoProportionRefinery,
+                'totalValue' => $rbdpoTotalValueRefinery,
+                'rpPerKg' => $rbdpoRpPerKgRefinery,
+            ],
+            [
+                'nama' => 'PFAD',
+                'proportion' => $pfadProportionRefinery,
+                'totalValue' => $pfadTotalValueRefinery,
+                'rpPerKg' => $pfadRpPerKgRefinery,
+            ]
+        ];
 
         return [
-            'laporanProduksi' => $laporanProduksi,
-            'settings' => $settings
+            'data' => [
+                'cpoConsume' => $cpoConsumeQty,
+                'rbdpo' => $rbdpoQty,
+                'pfad' => $pfadQty,
+                'rbdpoRendementPercentage' => $rbdpoRendementPercentage,
+                'pfadRendementPercentage' => $pfadRendementPercentage,
+                // 'proportionDirectRefinery' => $proportionDirectRefinery,
+                // 'proportionInDirectRefinery' => $proportionInDirectRefinery,
+                'dataDirect' => $directCost,
+                'dataInDirect' => $inDirectCost,
+                'totalCostRefinery' => $totalCostRefinery,
+                'totalRpPerKgRefinery' => $totalRpPerKgRefinery,
+                'allocationCostRefinery' => $allocationCostRefinery,
+            ]
         ];
     }
 
-    public function processGeneralLedger(Request $request, $settingIds)
+    public function costingHppRecap($request)
+    {
+        $proCost = $this->processProCost($request);
+        $laporanProduksi = $this->processPenyusutan($request);
+
+        $settingDirectIdsRefinery = $this->getSettingIds([
+            'coa_bahan_baku_cat2', 'coa_bahan_bakar_cat2', 'coa_bleaching_earth_cat2',
+            'coa_phosporic_acid_cat2', 'coa_others_cat2','coa_analisa_lab_cat2',
+            'coa_listrik_cat2', 'coa_air_cat2'
+        ]);
+
+        $settingInDirectIdsRefinery = $this->getSettingIds([
+            'coa_gaji_tunjangan_sosial_pimpinan_cat2', 'coa_gaji_tunjangan_sosial_pelaksana_cat2',
+            'coa_assuransi_pabrik_cat2', 'coa_limbah_pihak3_cat2', 'coa_bengkel_pemeliharaan_cat2', 'coa_depresiasi_cat2'
+        ]);
+
+        $tanggal = Carbon::parse($request->tanggal);
+        $generalLedgerData = $this->getGeneralLedgerData($tanggal);
+
+        $dataDirect = $this->processGeneralLedger($request, $settingDirectIdsRefinery, $generalLedgerData);
+        $dataInDirect = $this->processGeneralLedger($request, $settingInDirectIdsRefinery, $generalLedgerData);
+
+        $costingHppRefinery = $this->costingHppRefinery($laporanProduksi, $proCost, $dataDirect, $dataInDirect);
+
+        return [
+            'costingHppRefinery' => $costingHppRefinery,
+        ];
+    }
+
+    public function processGeneralLedger(Request $request, $settingIds, $generalLedgerData)
     {
         $tanggal = Carbon::parse($request->tanggal);
-        $debe = Debe::with('cat3', 'mReport', 'cCentre', 'plant', 'allocation')->get();
+        $debe = Debe::with(['cat3.cat2', 'mReport', 'cCentre', 'plant', 'allocation'])->get();
         $coa = Setting::whereIn('id', $settingIds)->orderBy('id')->get();
-        $gl = collect($this->getGeneralLedgerData($tanggal));
+        $gl = collect($generalLedgerData);
 
         $laporanData = $this->indexLaporanProduksi($request);
 
@@ -2095,7 +2146,7 @@ class Controller extends BaseController
             $coaData = [];
             $totalDebitSetting = 0;
             $totalCreditSetting = 0;
-            $mReportName = '';
+            $cat2Name = '';
 
             foreach ($coaNumbers as $coaNumber) {
                 $glData = $gl->filter(function($item) use ($coaNumber) {
@@ -2103,7 +2154,10 @@ class Controller extends BaseController
                 });
 
                 $debeModel = $debe->firstWhere('coa', $coaNumber);
-                $mReportName = $debeModel ? $debeModel->mReport->nama : '';
+
+                if ($debeModel && $debeModel->cat3 && $debeModel->cat3->cat2) {
+                    $cat2Name = $debeModel->cat3->cat2->nama;
+                }
 
                 $totalDebit = $glData->sum('debit');
                 $totalCredit = $glData->sum('credit');
@@ -2123,7 +2177,7 @@ class Controller extends BaseController
             }
 
             return [
-                'nama' => $mReportName,
+                'nama' => $cat2Name,
                 'setting' => $coaSetting->setting_name,
                 'total_debit' => $totalDebitSetting,
                 'total_credit' => $totalCreditSetting,
@@ -2135,6 +2189,130 @@ class Controller extends BaseController
         });
 
         return ['data' => $data->values()];
+    }
+
+
+    // public function costingHppRecap($request)
+    // {
+    //     $proCost = $this->processProCost($request);
+    //     $laporanProduksi = $this->processPenyusutan($request);
+
+    //     $settingDirectIdsRefinery = $this->getSettingIds([
+    //         'coa_bahan_baku_cat2', 'coa_bahan_bakar_cat2', 'coa_bleaching_earth_cat2',
+    //         'coa_phosporic_acid_cat2', 'coa_others_cat2','coa_analisa_lab_cat2',
+    //         'coa_listrik_cat2', 'coa_air_cat2'
+    //     ]);
+
+    //     $settingInDirectIdsRefinery = $this->getSettingIds([
+    //         'coa_gaji_tunjangan_sosial_pimpinan_cat2', 'coa_gaji_tunjangan_sosial_pelaksana_cat2',
+    //         'coa_assuransi_pabrik_cat2', 'coa_limbah_pihak3_cat2', 'coa_bengkel_pemeliharaan_cat2', 'coa_depresiasi_cat2'
+    //     ]);
+
+    //     $dataDirect = $this->processGeneralLedger($request, $settingDirectIdsRefinery);
+    //     $dataInDirect = $this->processGeneralLedger($request, $settingInDirectIdsRefinery);
+
+    //     $costingHppRefinery = $this->costingHppRefinery($laporanProduksi, $proCost, $dataDirect, $dataInDirect);
+
+    //     return [
+    //         'costingHppRefinery' => $costingHppRefinery,
+    //     ];
+    // }
+
+    // public function processGeneralLedger(Request $request, $settingIds)
+    // {
+    //     $tanggal = Carbon::parse($request->tanggal);
+    //     $debe = Debe::with(['cat3.cat2', 'mReport', 'cCentre', 'plant', 'allocation'])->get();
+    //     $coa = Setting::whereIn('id', $settingIds)->orderBy('id')->get();
+    //     $gl = collect($this->getGeneralLedgerData($tanggal));
+
+    //     $laporanData = $this->indexLaporanProduksi($request);
+
+    //     $totalQtyRefineryCPO = 0;
+    //     if (isset($laporanData['laporanProduksi'])) {
+    //         foreach ($laporanData['laporanProduksi'] as $laporan) {
+    //             if ($laporan['nama'] === 'Refinery') {
+    //                 foreach ($laporan['uraian'] as $uraian) {
+    //                     if ($uraian['nama'] === 'CPO (Olah)') {
+    //                         $totalQtyRefineryCPO = $uraian['total_qty'];
+    //                         break 2;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+
+    //     $data = $coa->map(function($coaSetting) use ($debe, $gl, $totalQtyRefineryCPO) {
+    //         $coaNumbers = explode(',', $coaSetting->setting_value);
+    //         $coaData = [];
+    //         $totalDebitSetting = 0;
+    //         $totalCreditSetting = 0;
+    //         $cat2Name = '';
+
+    //         foreach ($coaNumbers as $coaNumber) {
+    //             $glData = $gl->filter(function($item) use ($coaNumber) {
+    //                 return $item['account_account']['code'] == $coaNumber;
+    //             });
+
+    //             $debeModel = $debe->firstWhere('coa', $coaNumber);
+
+    //             if ($debeModel && $debeModel->cat3 && $debeModel->cat3->cat2) {
+    //                 $cat2Name = $debeModel->cat3->cat2->nama;
+    //             }
+
+    //             $totalDebit = $glData->sum('debit');
+    //             $totalCredit = $glData->sum('credit');
+    //             $result = $totalDebit - $totalCredit;
+
+    //             $totalDebitSetting += $totalDebit;
+    //             $totalCreditSetting += $totalCredit;
+
+    //             $coaData[] = [
+    //                 'coa_number' => $coaNumber,
+    //                 'debe' => $debeModel,
+    //                 'gl' => $glData->values(),
+    //                 'total_debit' => $totalDebit,
+    //                 'total_credit' => $totalCredit,
+    //                 'result' => $result
+    //             ];
+    //         }
+
+    //         return [
+    //             'nama' => $cat2Name,
+    //             'setting' => $coaSetting->setting_name,
+    //             'total_debit' => $totalDebitSetting,
+    //             'total_credit' => $totalCreditSetting,
+    //             'result' => $totalDebitSetting - $totalCreditSetting,
+    //             'total_qty_refinery_cpo_olah' => $totalQtyRefineryCPO,
+    //             'rp_per_kg_cpo_olah' => $totalQtyRefineryCPO > 0 ? ($totalDebitSetting - $totalCreditSetting) / $totalQtyRefineryCPO : 0,
+    //             'coa' => $coaData
+    //         ];
+    //     });
+
+    //     return ['data' => $data->values()];
+    // }
+
+    private function getSettingIds(array $settingNames)
+    {
+        return Setting::whereIn('setting_name', $settingNames)->pluck('id')->toArray();
+    }
+
+    public function indexLaporanProduksi(Request $request)
+    {
+        $tanggal = Carbon::parse($request->tanggal);
+        $year = $tanggal->year;
+        $month = $tanggal->month;
+
+        $data = $this->dataLaporanProduksi($year, $month);
+
+        $settingNames = ['konversi_liter_to_kg', 'pouch_to_box_1_liter', 'pouch_to_box_2_liter', 'konversi_m_liter_to_kg'];
+        $settings = Setting::whereIn('setting_name', $settingNames)->get();
+
+        $laporanProduksi = $this->prosesLaporanProd($data);
+
+        return [
+            'laporanProduksi' => $laporanProduksi,
+            'settings' => $settings
+        ];
     }
 
     public function avgPrice(Request $request){
