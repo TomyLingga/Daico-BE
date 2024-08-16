@@ -240,7 +240,7 @@ class InitialSupplyController extends Controller
     public function indexDate(Request $request)
     {
         try {
-            $data = $this->avgPrice($request);
+            $data = $this->persediaanAwal($request);
 
             return response()->json([
                 'data' => $data,
@@ -260,7 +260,7 @@ class InitialSupplyController extends Controller
     public function indexRecap(Request $request)
     {
         try {
-            $data = $this->processAvgPrice($request);
+            $data = $this->processQtyBebanProduksi($request);
 
             return response()->json([
                 'data' => $data,

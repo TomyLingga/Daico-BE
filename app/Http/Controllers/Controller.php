@@ -365,7 +365,7 @@ class Controller extends BaseController
             ]
         ];
 
-        $avgPrice = $this->processAvgPrice($request);
+        $avgPrice = $this->processQtyBebanProduksi($request);
 
         $totalQtyPFAD = $avgPrice['qtyBebanProduksi']['pfad'] ?? 0;
         $totalQtyRBDPO = $avgPrice['qtyBebanProduksi']['rbdpo'] ?? 0;
@@ -1896,6 +1896,54 @@ class Controller extends BaseController
         return $totalQty;
     }
 
+    public function costingHppFraksinasiIv56($laporanProduksi, $proCost, $konversiLiterToKg)
+    {
+        $rbdpoConsumeQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-56)', 'RBDPO (Olah)');
+        $rbdOleinIv56Qty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-56)', 'RBD Olein IV 56 (Produksi)');
+        $rbdStearinQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-56)', 'RBD Stearin (Produksi)');
+        $oleinConsumeQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (Minyakita)', 'Olein IV 56 Consume');
+
+        $rbdOleinIv56RendementPercentage = $rbdpoConsumeQty != 0 ? ($rbdOleinIv56Qty / $rbdpoConsumeQty) * 100 : 0;
+        $rbdStearinRendementPercentage = $rbdpoConsumeQty != 0 ? ($rbdStearinQty / $rbdpoConsumeQty) * 100 : 0;
+        $cartonMinyakita1LProportion = $konversiLiterToKg;
+        $cartonMinyakita2LProportion = $konversiLiterToKg;
+
+        $cartonMinyakita1LQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (Minyakita)', 'Carton Minyakita 1 Liter');
+        $cartonMinyakita2LQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (Minyakita)', 'Carton Minyakita 2 Liter');
+        $cartonMinyakitaQty = $cartonMinyakita1LQty + $cartonMinyakita2LQty;
+        $cartonMinyakita1LPercent = $cartonMinyakitaQty != 0 ? ($cartonMinyakita1LQty / $cartonMinyakitaQty) * 100 : 0;
+        $cartonMinyakita2LPercent = $cartonMinyakitaQty != 0 ? ($cartonMinyakita2LQty / $cartonMinyakitaQty) * 100 : 0;
+        $cartonMinyakitaTotalQty = $cartonMinyakitaQty*$konversiLiterToKg;
+        $additionalMinyakita = abs($oleinConsumeQty - $cartonMinyakitaTotalQty);    // abs = alwasy positive
+        $cartonMinyakita1LTotalQty = ($cartonMinyakita1LQty*$cartonMinyakita1LProportion)+($additionalMinyakita*$cartonMinyakita1LPercent/100);
+        $cartonMinyakita2LTotalQty = ($cartonMinyakita2LQty*$cartonMinyakita2LProportion)+($additionalMinyakita*$cartonMinyakita2LPercent/100);
+        $cartonMinyakita1LRendementPercentage = ($cartonMinyakita1LQty*$cartonMinyakita1LProportion)+($additionalMinyakita*$cartonMinyakita1LPercent/100);
+        $cartonMinyakita2LRendementPercentage = ($cartonMinyakita2LQty*$cartonMinyakita2LProportion)+($additionalMinyakita*$cartonMinyakita2LPercent/100);
+
+        // dd($additionalMinyakita);
+        return [
+            'rbdpoConsume' => $rbdpoConsumeQty,
+            'rbdOleinIv56Qty' => $rbdOleinIv56Qty,
+            'rbdStearinQty' => $rbdStearinQty,
+            'rbdOleinIv56RendementPercentage' => $rbdOleinIv56RendementPercentage,
+            'rbdStearinRendementPercentage' => $rbdStearinRendementPercentage,
+            'minyakita1Liter' => [
+                    'proportion' => $cartonMinyakita1LProportion,
+                    'proportionPercentage' => $cartonMinyakita1LPercent,
+                    'totalQty' => $cartonMinyakita1LTotalQty,
+                    'rendementPercentage' => $cartonMinyakita1LRendementPercentage,
+            ],
+            'minyakita2Liter' => [
+                    'proportion' => $cartonMinyakita2LProportion,
+                    'proportionPercentage' => $cartonMinyakita2LPercent,
+                    'totalQty' => $cartonMinyakita2LTotalQty,
+                    'rendementPercentage' => $cartonMinyakita2LRendementPercentage,
+            ],
+            'additional' => $additionalMinyakita
+        ];
+
+    }
+
     public function costingHppRefinery($laporanProduksi, $proCost, $dataDirect, $dataInDirect)
     {
         $cpoConsumeQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Refinery', 'CPO (Olah)');
@@ -2072,20 +2120,16 @@ class Controller extends BaseController
         ];
 
         return [
-            'data' => [
-                'cpoConsume' => $cpoConsumeQty,
-                'rbdpo' => $rbdpoQty,
-                'pfad' => $pfadQty,
-                'rbdpoRendementPercentage' => $rbdpoRendementPercentage,
-                'pfadRendementPercentage' => $pfadRendementPercentage,
-                // 'proportionDirectRefinery' => $proportionDirectRefinery,
-                // 'proportionInDirectRefinery' => $proportionInDirectRefinery,
-                'dataDirect' => $directCost,
-                'dataInDirect' => $inDirectCost,
-                'totalCostRefinery' => $totalCostRefinery,
-                'totalRpPerKgRefinery' => $totalRpPerKgRefinery,
-                'allocationCostRefinery' => $allocationCostRefinery,
-            ]
+            'cpoConsume' => $cpoConsumeQty,
+            'rbdpo' => $rbdpoQty,
+            'pfad' => $pfadQty,
+            'rbdpoRendementPercentage' => $rbdpoRendementPercentage,
+            'pfadRendementPercentage' => $pfadRendementPercentage,
+            'dataDirect' => $directCost,
+            'dataInDirect' => $inDirectCost,
+            'totalCostRefinery' => $totalCostRefinery,
+            'totalRpPerKgRefinery' => $totalRpPerKgRefinery,
+            'allocationCostRefinery' => $allocationCostRefinery,
         ];
     }
 
@@ -2093,6 +2137,8 @@ class Controller extends BaseController
     {
         $proCost = $this->processProCost($request);
         $laporanProduksi = $this->processPenyusutan($request);
+
+        $konversiLiterToKg = $this->settingGet('konversi_liter_to_kg')->setting_value;
 
         $settingDirectIdsRefinery = $this->getSettingIds([
             'coa_bahan_baku_cat2', 'coa_bahan_bakar_cat2', 'coa_bleaching_earth_cat2',
@@ -2108,13 +2154,15 @@ class Controller extends BaseController
         $tanggal = Carbon::parse($request->tanggal);
         $generalLedgerData = $this->getGeneralLedgerData($tanggal);
 
-        $dataDirect = $this->processGeneralLedger($request, $settingDirectIdsRefinery, $generalLedgerData);
-        $dataInDirect = $this->processGeneralLedger($request, $settingInDirectIdsRefinery, $generalLedgerData);
+        $dataDirectRef = $this->processGeneralLedger($request, $settingDirectIdsRefinery, $generalLedgerData);
+        $dataInDirectRef = $this->processGeneralLedger($request, $settingInDirectIdsRefinery, $generalLedgerData);
 
-        $costingHppRefinery = $this->costingHppRefinery($laporanProduksi, $proCost, $dataDirect, $dataInDirect);
+        $costingHppRefinery = $this->costingHppRefinery($laporanProduksi, $proCost, $dataDirectRef, $dataInDirectRef);
+        $costingHppFraksinasiIv56 = $this->costingHppFraksinasiIv56($laporanProduksi, $proCost, $konversiLiterToKg);
 
         return [
             'costingHppRefinery' => $costingHppRefinery,
+            'costingHppFraksinasiIv56' => $costingHppFraksinasiIv56,
         ];
     }
 
@@ -2191,106 +2239,6 @@ class Controller extends BaseController
         return ['data' => $data->values()];
     }
 
-
-    // public function costingHppRecap($request)
-    // {
-    //     $proCost = $this->processProCost($request);
-    //     $laporanProduksi = $this->processPenyusutan($request);
-
-    //     $settingDirectIdsRefinery = $this->getSettingIds([
-    //         'coa_bahan_baku_cat2', 'coa_bahan_bakar_cat2', 'coa_bleaching_earth_cat2',
-    //         'coa_phosporic_acid_cat2', 'coa_others_cat2','coa_analisa_lab_cat2',
-    //         'coa_listrik_cat2', 'coa_air_cat2'
-    //     ]);
-
-    //     $settingInDirectIdsRefinery = $this->getSettingIds([
-    //         'coa_gaji_tunjangan_sosial_pimpinan_cat2', 'coa_gaji_tunjangan_sosial_pelaksana_cat2',
-    //         'coa_assuransi_pabrik_cat2', 'coa_limbah_pihak3_cat2', 'coa_bengkel_pemeliharaan_cat2', 'coa_depresiasi_cat2'
-    //     ]);
-
-    //     $dataDirect = $this->processGeneralLedger($request, $settingDirectIdsRefinery);
-    //     $dataInDirect = $this->processGeneralLedger($request, $settingInDirectIdsRefinery);
-
-    //     $costingHppRefinery = $this->costingHppRefinery($laporanProduksi, $proCost, $dataDirect, $dataInDirect);
-
-    //     return [
-    //         'costingHppRefinery' => $costingHppRefinery,
-    //     ];
-    // }
-
-    // public function processGeneralLedger(Request $request, $settingIds)
-    // {
-    //     $tanggal = Carbon::parse($request->tanggal);
-    //     $debe = Debe::with(['cat3.cat2', 'mReport', 'cCentre', 'plant', 'allocation'])->get();
-    //     $coa = Setting::whereIn('id', $settingIds)->orderBy('id')->get();
-    //     $gl = collect($this->getGeneralLedgerData($tanggal));
-
-    //     $laporanData = $this->indexLaporanProduksi($request);
-
-    //     $totalQtyRefineryCPO = 0;
-    //     if (isset($laporanData['laporanProduksi'])) {
-    //         foreach ($laporanData['laporanProduksi'] as $laporan) {
-    //             if ($laporan['nama'] === 'Refinery') {
-    //                 foreach ($laporan['uraian'] as $uraian) {
-    //                     if ($uraian['nama'] === 'CPO (Olah)') {
-    //                         $totalQtyRefineryCPO = $uraian['total_qty'];
-    //                         break 2;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     $data = $coa->map(function($coaSetting) use ($debe, $gl, $totalQtyRefineryCPO) {
-    //         $coaNumbers = explode(',', $coaSetting->setting_value);
-    //         $coaData = [];
-    //         $totalDebitSetting = 0;
-    //         $totalCreditSetting = 0;
-    //         $cat2Name = '';
-
-    //         foreach ($coaNumbers as $coaNumber) {
-    //             $glData = $gl->filter(function($item) use ($coaNumber) {
-    //                 return $item['account_account']['code'] == $coaNumber;
-    //             });
-
-    //             $debeModel = $debe->firstWhere('coa', $coaNumber);
-
-    //             if ($debeModel && $debeModel->cat3 && $debeModel->cat3->cat2) {
-    //                 $cat2Name = $debeModel->cat3->cat2->nama;
-    //             }
-
-    //             $totalDebit = $glData->sum('debit');
-    //             $totalCredit = $glData->sum('credit');
-    //             $result = $totalDebit - $totalCredit;
-
-    //             $totalDebitSetting += $totalDebit;
-    //             $totalCreditSetting += $totalCredit;
-
-    //             $coaData[] = [
-    //                 'coa_number' => $coaNumber,
-    //                 'debe' => $debeModel,
-    //                 'gl' => $glData->values(),
-    //                 'total_debit' => $totalDebit,
-    //                 'total_credit' => $totalCredit,
-    //                 'result' => $result
-    //             ];
-    //         }
-
-    //         return [
-    //             'nama' => $cat2Name,
-    //             'setting' => $coaSetting->setting_name,
-    //             'total_debit' => $totalDebitSetting,
-    //             'total_credit' => $totalCreditSetting,
-    //             'result' => $totalDebitSetting - $totalCreditSetting,
-    //             'total_qty_refinery_cpo_olah' => $totalQtyRefineryCPO,
-    //             'rp_per_kg_cpo_olah' => $totalQtyRefineryCPO > 0 ? ($totalDebitSetting - $totalCreditSetting) / $totalQtyRefineryCPO : 0,
-    //             'coa' => $coaData
-    //         ];
-    //     });
-
-    //     return ['data' => $data->values()];
-    // }
-
     private function getSettingIds(array $settingNames)
     {
         return Setting::whereIn('setting_name', $settingNames)->pluck('id')->toArray();
@@ -2315,7 +2263,7 @@ class Controller extends BaseController
         ];
     }
 
-    public function avgPrice(Request $request){
+    public function persediaanAwal(Request $request){
         $tanggal = $request->tanggal;
 
         $persediaanAwal = InitialSupply::with('productable')
@@ -2359,9 +2307,9 @@ class Controller extends BaseController
             ];
     }
 
-    public function processAvgPrice(Request $request)
+    public function processQtyBebanProduksi(Request $request)
     {
-        $persediaanAwal = $this->avgPrice($request);
+        $persediaanAwal = $this->persediaanAwal($request);
 
         $detAlloc = $this->processRecapData($request);
         $proCost = $this->processProCost($request);
@@ -2427,6 +2375,9 @@ class Controller extends BaseController
                                     ($extractedData['fraksinasi_iv57']['Produksi Fraksinasi IV-57']['RBDStearin'] ?? 0) +
                                     ($extractedData['fraksinasi_iv58']['Produksi Fraksinasi IV-58']['RBDStearin'] ?? 0) +
                                     ($extractedData['fraksinasi_iv60']['Produksi Fraksinasi IV-60']['RBDStearin'] ?? 0);
+
+
+
         return[
             'persediaanAwal' => $persediaanAwal,
             'qtyBebanProduksi' => [
@@ -2444,6 +2395,11 @@ class Controller extends BaseController
                 'kemasanNusakita' => $qtyBebanProdRBDOlein60Nusakita,
             ]
         ];
+    }
+
+    public function processAvgPriceNext(Request $request){
+        $persediaanAwal = $this->processQtyBebanProduksi($request);
+
     }
 
 }
