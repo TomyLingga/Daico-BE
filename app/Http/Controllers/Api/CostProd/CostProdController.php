@@ -44,8 +44,8 @@ class CostProdController extends Controller
         $coa = Setting::whereIn('id', $settingIds)->orderBy('id')->get();
         $gl = collect($this->getGeneralLedgerData($tanggal));
 
-        $laporanProduksiController = new LaporanProduksiController();
-        $laporanData = $laporanProduksiController->index($request);
+        // $laporanProduksiController = new LaporanProduksiController();
+        $laporanData = $this->processRecapData($request);
 
         $totalQtyRefineryCPO = 0;
         if (isset($laporanData['laporanProduksi'])) {
