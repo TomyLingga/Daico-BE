@@ -260,7 +260,7 @@ class InitialSupplyController extends Controller
     public function indexRecap(Request $request)
     {
         try {
-            $data = $this->processQtyBebanProduksi($request);
+            $data = $this->avgPrice($request);
 
             return response()->json([
                 'data' => $data,

@@ -1326,11 +1326,11 @@ class Controller extends BaseController
                     'nama' => 'Proporsi biaya (%)',
                     'item' => [
                         [
-                            'name' => 'RBDPO',
+                            'name' => 'RBDOlein IV-60',
                             'value' => $proporsiBiayaPersenRbdOleinIv60,
                         ],
                         [
-                            'name' => 'PFAD',
+                            'name' => 'RBDStearin',
                             'value' => $proporsiBiayaPersenRbdStearin,
                         ],
                         [
@@ -1413,11 +1413,11 @@ class Controller extends BaseController
                     'nama' => 'Proporsi biaya (%)',
                     'item' => [
                         [
-                            'name' => 'RBDPO',
+                            'name' => 'RBDOlein IV-58',
                             'value' => $proporsiBiayaPersenRbdOleinIv58,
                         ],
                         [
-                            'name' => 'PFAD',
+                            'name' => 'RBDStearin',
                             'value' => $proporsiBiayaPersenRbdStearin,
                         ],
                         [
@@ -1500,11 +1500,11 @@ class Controller extends BaseController
                     'nama' => 'Proporsi biaya (%)',
                     'item' => [
                         [
-                            'name' => 'RBDPO',
+                            'name' => 'RBDOlein IV-57',
                             'value' => $proporsiBiayaPersenRbdOleinIv57,
                         ],
                         [
-                            'name' => 'PFAD',
+                            'name' => 'RBDStearin',
                             'value' => $proporsiBiayaPersenRbdStearin,
                         ],
                         [
@@ -1586,11 +1586,11 @@ class Controller extends BaseController
                     'nama' => 'Proporsi biaya (%)',
                     'item' => [
                         [
-                            'name' => 'RBDPO',
+                            'name' => 'RBDOlein IV-56',
                             'value' => $proporsiBiayaPersenRbdOleinIv56,
                         ],
                         [
-                            'name' => 'PFAD',
+                            'name' => 'RBDStearin',
                             'value' => $proporsiBiayaPersenRbdStearin,
                         ],
                         [
@@ -1844,19 +1844,26 @@ class Controller extends BaseController
         $totalValue = 0;
         $items = array_map(function($dataItem) use ($totalQty, $proportionData, &$totalValue) {
             $proportion = 100;
+            $proportion2 = 100; // Default proportion2 value
+
+            // Find the proportion and proportion2 in proportionData
             foreach ($proportionData as $proportionItem) {
                 if ($proportionItem['nama'] === $dataItem['nama']) {
                     $proportion = $proportionItem['proportion'];
+                    $proportion2 = isset($proportionItem['proportion2']) ? $proportionItem['proportion2'] : 1;
                     break;
                 }
             }
 
-            $itemTotalValue = $dataItem['result'] * ($proportion / 100);
+            // Calculate the item total value
+            $itemTotalValue = $dataItem['result'] * ($proportion / 100) * ($proportion2 / 100);
+
             $totalValue += $itemTotalValue;
 
             return [
                 'name' => $dataItem['nama'],
                 'proportion' => $proportion,
+                'proportion2' => $proportion2, // Include proportion2 in the return data
                 'value' => $dataItem['result'],
                 'totalValue' => $itemTotalValue,
                 'rpPerKg' => $totalQty != 0 ? $itemTotalValue / $totalQty : 0,
@@ -1896,7 +1903,7 @@ class Controller extends BaseController
         return $totalQty;
     }
 
-    public function costingHppFraksinasiIv56($laporanProduksi, $proCost, $konversiLiterToKg)
+    public function costingHppFraksinasiIv56($laporanProduksi, $alokasiCost, $proporPercentFrak56, $proporPercentFrak56PlusPackaging, $konversiLiterToKg, $dataDirectFrak56, $dataInDirectFrak56, $dataPackagingCostFrak56)
     {
         $rbdpoConsumeQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-56)', 'RBDPO (Olah)');
         $rbdOleinIv56Qty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-56)', 'RBD Olein IV 56 (Produksi)');
@@ -1915,12 +1922,138 @@ class Controller extends BaseController
         $cartonMinyakita2LPercent = $cartonMinyakitaQty != 0 ? ($cartonMinyakita2LQty / $cartonMinyakitaQty) * 100 : 0;
         $cartonMinyakitaTotalQty = $cartonMinyakitaQty*$konversiLiterToKg;
         $additionalMinyakita = abs($oleinConsumeQty - $cartonMinyakitaTotalQty);    // abs = alwasy positive
-        $cartonMinyakita1LTotalQty = ($cartonMinyakita1LQty*$cartonMinyakita1LProportion)+($additionalMinyakita*$cartonMinyakita1LPercent/100);
-        $cartonMinyakita2LTotalQty = ($cartonMinyakita2LQty*$cartonMinyakita2LProportion)+($additionalMinyakita*$cartonMinyakita2LPercent/100);
-        $cartonMinyakita1LRendementPercentage = ($cartonMinyakita1LQty*$cartonMinyakita1LProportion)+($additionalMinyakita*$cartonMinyakita1LPercent/100);
-        $cartonMinyakita2LRendementPercentage = ($cartonMinyakita2LQty*$cartonMinyakita2LProportion)+($additionalMinyakita*$cartonMinyakita2LPercent/100);
+        $minyakita1LTotalQty = ($cartonMinyakita1LQty*$cartonMinyakita1LProportion)+($additionalMinyakita*($cartonMinyakita1LPercent/100));
+        $minyakita2LTotalQty = ($cartonMinyakita2LQty*$cartonMinyakita2LProportion)+($additionalMinyakita*($cartonMinyakita2LPercent/100));
+        $totalMinyakitaQty = $minyakita1LTotalQty + $minyakita2LTotalQty;
+        $minyakita1LRendementPercentage = $totalMinyakitaQty != 0 ? ($minyakita1LTotalQty / $totalMinyakitaQty) * 100 : 0;
+        $minyakita2LRendementPercentage = $totalMinyakitaQty != 0 ? ($minyakita2LTotalQty / $totalMinyakitaQty) * 100 : 0;
 
-        // dd($additionalMinyakita);
+        $produksiAll = $laporanProduksi['produksiAll'];
+        $produksiAllFraksinasiPercentage = 0;
+
+        if (isset($produksiAll['production']) && is_array($produksiAll['production'])) {
+            foreach ($produksiAll['production'] as $production) {
+                if (isset($production['items']) && is_array($production['items'])) {
+                    foreach ($production['items'] as $item) {
+                        if ($item['name'] === 'Fraksinasi') {
+                            $produksiAllFraksinasiPercentage = $item['percentage'];
+                        }
+                    }
+                }
+            }
+        }
+
+        $penyusutanAllocation = $laporanProduksi['biayaPenyusutanAllocation'];
+        $penyusutanAllocationFraksinasiPercentage = 0;
+
+        foreach ($penyusutanAllocation['columns'] as $column) {
+            if ($column['name'] === '%') {
+                foreach ($column['alokasi'] as $alokasi) {
+                    if ($alokasi['name'] === 'Fraksinasi') {
+                        $penyusutanAllocationFraksinasiPercentage = $alokasi['value'];
+                    }
+                }
+            }
+        }
+
+        $bahanBakarProportionFrak56 = $alokasiCost['Fraksinasi']['gasPercentage'] ?? 0;
+        $othersProportionFrak56 = $produksiAllFraksinasiPercentage;
+        $analisaLabProportionFrak56 = $othersProportionFrak56;
+        $listrikProportionFrak56 = $alokasiCost['Fraksinasi']['listrikPercentage'] ?? 0;
+        $airProportionFrak56 = $alokasiCost['Fraksinasi']['airPercentage'] ?? 0;
+        $gajiPimpinanProportionFrak56 = $othersProportionFrak56 ?? 0;
+        $gajiPelaksanaProportionFrak56 = $othersProportionFrak56 ?? 0;
+        $asuransiPabrikProportionFrak56 = $othersProportionFrak56 ?? 0;
+        $bengkelProportionFrak56 = $othersProportionFrak56 ?? 0;
+        $depresiasiProportionFrak56 = $penyusutanAllocationFraksinasiPercentage ?? 0;
+
+        $proportionDirectFrak56 = [
+            [
+                'nama' => 'Bahan Bakar',
+                'proportion' => $bahanBakarProportionFrak56,
+                'proportion2' => $proporPercentFrak56,
+            ],
+            [
+                'nama' => 'Others',
+                'proportion' => $othersProportionFrak56,
+                'proportion2' => $proporPercentFrak56,
+            ],
+            [
+                'nama' => 'Biaya Analisa & Laboratorium',
+                'proportion' => $analisaLabProportionFrak56,
+                'proportion2' => $proporPercentFrak56,
+            ],
+            [
+                'nama' => 'Biaya Listrik',
+                'proportion' => $listrikProportionFrak56,
+                'proportion2' => $proporPercentFrak56,
+            ],
+            [
+                'nama' => 'Biaya Air',
+                'proportion' => $airProportionFrak56,
+                'proportion2' => $proporPercentFrak56,
+            ],
+        ];
+
+        $proportionInDirectFrak56 = [
+            [
+                'nama' => 'Gaji, Tunjangan & Biaya Sosial Karyawan Pimpinan',
+                'proportion' => $gajiPimpinanProportionFrak56,
+                'proportion2' => $proporPercentFrak56,
+            ],
+            [
+                'nama' => 'Gaji, Tunjangan & Biaya Sosial Karyawan Pelaksana',
+                'proportion' => $gajiPelaksanaProportionFrak56,
+                'proportion2' => $proporPercentFrak56,
+            ],
+            [
+                'nama' => 'Biaya Assuransi Pabrik',
+                'proportion' => $asuransiPabrikProportionFrak56,
+                'proportion2' => $proporPercentFrak56,
+            ],
+            [
+                'nama' => 'Biaya Bengkel & Pemeliharaan',
+                'proportion' => $bengkelProportionFrak56,
+                'proportion2' => $proporPercentFrak56,
+            ],
+            [
+                'nama' => 'Depresiasi',
+                'proportion' => $depresiasiProportionFrak56,
+                'proportion2' => $proporPercentFrak56,
+            ],
+        ];
+
+        $proportionPackagingFrak56 = [
+            [
+                'nama' => 'Gaji & Tunjangan',
+                'proportion' => $proporPercentFrak56PlusPackaging,
+            ],
+            [
+                'nama' => 'Bahan Kimia',
+                'proportion' => $proporPercentFrak56PlusPackaging,
+            ],
+            [
+                'nama' => 'Pengangkutan / Langsir',
+                'proportion' => $proporPercentFrak56PlusPackaging,
+            ],
+            [
+                'nama' => 'Bahan Pengepakan Lainnya',
+                'proportion' => $proporPercentFrak56PlusPackaging,
+            ],
+            [
+                'nama' => 'Biaya Asuransi Gudang & Filling',
+                'proportion' => $proporPercentFrak56PlusPackaging,
+            ],
+            [
+                'nama' => 'Depresiasi',
+                'proportion' => $proporPercentFrak56PlusPackaging,
+            ],
+        ];
+
+        $directCost = $this->generateCostOutput('Fraksinasi IV-56', $dataDirectFrak56, $rbdpoConsumeQty, $proportionDirectFrak56);
+        $inDirectCost = $this->generateCostOutput('Fraksinasi IV-56', $dataInDirectFrak56, $rbdpoConsumeQty, $proportionInDirectFrak56);
+        $packagingCost = $this->generateCostOutput('Fraksinasi IV-56', $dataPackagingCostFrak56, $rbdpoConsumeQty, $proportionPackagingFrak56);
+
         return [
             'rbdpoConsume' => $rbdpoConsumeQty,
             'rbdOleinIv56Qty' => $rbdOleinIv56Qty,
@@ -1928,23 +2061,163 @@ class Controller extends BaseController
             'rbdOleinIv56RendementPercentage' => $rbdOleinIv56RendementPercentage,
             'rbdStearinRendementPercentage' => $rbdStearinRendementPercentage,
             'minyakita1Liter' => [
-                    'proportion' => $cartonMinyakita1LProportion,
-                    'proportionPercentage' => $cartonMinyakita1LPercent,
-                    'totalQty' => $cartonMinyakita1LTotalQty,
-                    'rendementPercentage' => $cartonMinyakita1LRendementPercentage,
+                'proportion' => $cartonMinyakita1LProportion,
+                'proportionPercentage' => $cartonMinyakita1LPercent,
+                'totalQty' => $minyakita1LTotalQty,
+                'rendementPercentage' => $minyakita1LRendementPercentage,
             ],
             'minyakita2Liter' => [
-                    'proportion' => $cartonMinyakita2LProportion,
-                    'proportionPercentage' => $cartonMinyakita2LPercent,
-                    'totalQty' => $cartonMinyakita2LTotalQty,
-                    'rendementPercentage' => $cartonMinyakita2LRendementPercentage,
+                'proportion' => $cartonMinyakita2LProportion,
+                'proportionPercentage' => $cartonMinyakita2LPercent,
+                'totalQty' => $minyakita2LTotalQty,
+                'rendementPercentage' => $minyakita2LRendementPercentage,
             ],
-            'additional' => $additionalMinyakita
+            'additional' => $additionalMinyakita,
+            'dataDirect' => $directCost,
+            'dataInDirect' => $inDirectCost,
+            'dataPackaging' => $packagingCost,
         ];
 
     }
 
-    public function costingHppRefinery($laporanProduksi, $proCost, $dataDirect, $dataInDirect)
+    public function nextCostingHppFraksinasiIv56($costingHppFraksinasiIv56, $rpPerKgRbdpoFraksinasiIv56, $proCost)
+    {
+        $bahanBakuValueFraksinasiIv56 = $rpPerKgRbdpoFraksinasiIv56 * $costingHppFraksinasiIv56['rbdpoConsume'];
+
+        $bahanBakuFraksinasiIv56 = [
+            'name' => 'Bahan Baku',
+            'proportion' => 100,
+            'value' => $rpPerKgRbdpoFraksinasiIv56,
+            'totalValue' => $bahanBakuValueFraksinasiIv56,
+            'rpPerKg' => $rpPerKgRbdpoFraksinasiIv56
+        ];
+
+        $costingHppFraksinasiIv56['dataDirect']['cost'][0]['item'][] = $bahanBakuFraksinasiIv56;
+        $totalCostFraksinasiIv56 = $bahanBakuValueFraksinasiIv56;
+
+        foreach ($costingHppFraksinasiIv56['dataDirect']['cost'][0]['item'] as $item) {
+            $totalCostFraksinasiIv56 += $item['totalValue'];
+        }
+
+        foreach ($costingHppFraksinasiIv56['dataInDirect']['cost'][0]['item'] as $item) {
+            $totalCostFraksinasiIv56 += $item['totalValue'];
+        }
+
+        $totalRpPerKgFraksinasiIv56 = $costingHppFraksinasiIv56['rbdpoConsume']> 0 ?$totalCostFraksinasiIv56 / $costingHppFraksinasiIv56['rbdpoConsume'] : 0;
+        $costingHppFraksinasiIv56['totalCostFraksinasiIv56'] = $totalCostFraksinasiIv56;
+        $costingHppFraksinasiIv56['totalRpPerKgFraksinasiIv56'] = $totalRpPerKgFraksinasiIv56;
+
+        $totalCostFraksinasiIv56PlusPackaging = 0;
+        foreach ($costingHppFraksinasiIv56['dataPackaging']['cost'][0]['item'] as $item) {
+            $totalCostFraksinasiIv56PlusPackaging += $item['totalValue'];
+        }
+
+        $totalRpPerKgFraksinasiIv56PlusPackaging = $costingHppFraksinasiIv56['rbdpoConsume']> 0 ?$totalCostFraksinasiIv56PlusPackaging / $costingHppFraksinasiIv56['rbdpoConsume'] : 0;
+        $costingHppFraksinasiIv56['totalCostFraksinasiIv56PlusPackaging'] = $totalCostFraksinasiIv56PlusPackaging;
+        $costingHppFraksinasiIv56['totalRpPerKgFraksinasiIv56PlusPackaging'] = $totalRpPerKgFraksinasiIv56PlusPackaging;
+        $proporsiBiayaPercentage = [];
+        foreach ($proCost['data']['produksiFraksinasiIV56Data']['data'] as $data) {
+            if ($data['nama'] === 'Proporsi biaya (%)') {
+                foreach ($data['item'] as $item) {
+                    $proporsiBiayaPercentage[$item['name']] = $item['value'];
+                }
+            }
+        }
+
+        $dataPackaging = $costingHppFraksinasiIv56['dataPackaging']['cost'][0]['item'];
+
+        $gajiTunjangan = null;
+        $bahanKimia = null;
+        $angkutLangsir = null;
+        $bahanPengepak = null;
+        $asuransiGudangFilling = null;
+        $depresiasi = null;
+        $minyakita1Ltr = null;
+        $minyakita2Ltr = null;
+        // dd($dataPackaging);
+        foreach ($dataPackaging as $item) {
+            if ($item['name'] === 'Gaji & Tunjangan') {
+                $gajiTunjangan = $item;
+            }else if($item['name'] === 'Bahan Kimia'){
+                $bahanKimia = $item;
+            }else if($item['name'] === 'Pengangkutan / Langsir'){
+                $angkutLangsir = $item;
+            }else if($item['name'] === 'Bahan Pengepakan Lainnya'){
+                $bahanPengepak = $item;
+            }else if($item['name'] === 'Biaya Asuransi Gudang & Filling'){
+                $asuransiGudangFilling = $item;
+            }else if($item['name'] === 'Depresiasi'){
+                $depresiasi = $item;
+            }else if($item['name'] === 'Minyakita - 1 Ltr'){
+                $minyakita1Ltr = $item;
+            }else if($item['name'] === 'Minyakita - 2 Ltr'){
+                $minyakita2Ltr = $item;
+            }
+        }
+
+        $rbdOlein56ProportionFrak56 = $proporsiBiayaPercentage['RBDOlein IV-56'] ?? 0;
+        $rbdStearinProportionFrak56 = $proporsiBiayaPercentage['RBDStearin'] ?? 0;
+        $rbdOlein56TotalValueFrak56 = $totalCostFraksinasiIv56 * ($rbdOlein56ProportionFrak56 / 100);
+        $rbdStearinTotalValueFrak56 = $totalCostFraksinasiIv56 * ($rbdStearinProportionFrak56 / 100);
+        $rbdOlein56RpPerKgFrak56 = ($costingHppFraksinasiIv56['rbdOleinIv56Qty'] != 0) ? ($rbdOlein56TotalValueFrak56 / $costingHppFraksinasiIv56['rbdOleinIv56Qty']) : 0;
+        $rbdStearinRpPerKgFrak56 = ($costingHppFraksinasiIv56['rbdStearinQty'] != 0) ? ($rbdStearinTotalValueFrak56 / $costingHppFraksinasiIv56['rbdStearinQty']) : 0;
+        $minyakita1LProportionFrak56 = $costingHppFraksinasiIv56['minyakita1Liter']['rendementPercentage'] ?? 0;
+        $minyakita2LProportionFrak56 = $costingHppFraksinasiIv56['minyakita2Liter']['rendementPercentage'] ?? 0;
+        $minyakita1LTotalValueFrak56 = ($rbdOlein56RpPerKgFrak56*$costingHppFraksinasiIv56['minyakita1Liter']['totalQty'])+
+                                        (($gajiTunjangan['totalValue']+$bahanKimia['totalValue']+$angkutLangsir['totalValue']+
+                                        $bahanPengepak['totalValue']+$asuransiGudangFilling['totalValue']+$depresiasi['totalValue'])*$minyakita1LProportionFrak56)+$minyakita1Ltr['totalValue'] ?? 0;
+        $minyakita2LTotalValueFrak56 = ($rbdOlein56RpPerKgFrak56*$costingHppFraksinasiIv56['minyakita2Liter']['totalQty'])+
+                                        (($gajiTunjangan['totalValue']+$bahanKimia['totalValue']+$angkutLangsir['totalValue']+
+                                        $bahanPengepak['totalValue']+$asuransiGudangFilling['totalValue']+$depresiasi['totalValue'])*$minyakita2LProportionFrak56)+$minyakita2Ltr['totalValue'] ?? 0;
+        $minyakita1LRpPerKgFrak56 = $costingHppFraksinasiIv56['minyakita1Liter']['totalQty'] != 0 ? ($minyakita1LTotalValueFrak56 / $costingHppFraksinasiIv56['minyakita1Liter']['totalQty']) * 100 : 0;
+        $minyakita2LRpPerKgFrak56 = $costingHppFraksinasiIv56['minyakita2Liter']['totalQty'] != 0 ? ($minyakita2LTotalValueFrak56 / $costingHppFraksinasiIv56['minyakita2Liter']['totalQty']) * 100 : 0;
+        $selisihFrak56 = $costingHppFraksinasiIv56['totalCostFraksinasiIv56'] - $rbdOlein56TotalValueFrak56 - $rbdStearinTotalValueFrak56;
+        $palingBawahFrak56 = ($rbdOlein56RpPerKgFrak56 * ($costingHppFraksinasiIv56['minyakita1Liter']['totalQty'] + $costingHppFraksinasiIv56['minyakita2Liter']['totalQty'])) +
+                            ($gajiTunjangan['totalValue']+$minyakita1Ltr['totalValue']+$minyakita2Ltr['totalValue']+$bahanKimia['totalValue']+$angkutLangsir['totalValue']+$bahanPengepak['totalValue']+
+                            $asuransiGudangFilling['totalValue']+$depresiasi['totalValue'])-$minyakita1LTotalValueFrak56-$minyakita2LTotalValueFrak56;
+
+
+        $allocationCostFraksinasiIv56 = [
+            [
+                'nama' => 'RBD Olein IV-56',
+                'proportion' => $rbdOlein56ProportionFrak56,
+                'totalValue' => $rbdOlein56TotalValueFrak56,
+                'rpPerKg' => $rbdOlein56RpPerKgFrak56,
+            ],
+            [
+                'nama' => 'RBD Stearin',
+                'proportion' => $rbdStearinProportionFrak56,
+                'totalValue' => $rbdStearinTotalValueFrak56,
+                'rpPerKg' => $rbdStearinRpPerKgFrak56,
+            ],
+            [
+                'nama' => 'Minyakita - 1 Ltr',
+                'proportion' => $minyakita1LProportionFrak56,
+                'totalValue' => $minyakita1LTotalValueFrak56,
+                'rpPerKg' => $minyakita1LRpPerKgFrak56,
+            ],
+            [
+                'nama' => 'Minyakita - 2 Ltr',
+                'proportion' => $minyakita2LProportionFrak56,
+                'totalValue' => $minyakita2LTotalValueFrak56,
+                'rpPerKg' => $minyakita2LRpPerKgFrak56,
+            ],
+            [
+                'nama' => 'Selisih',
+                'totalValue' => $selisihFrak56,
+            ],
+            [
+                'nama' => 'palingBawah',
+                'totalValue' => $palingBawahFrak56,
+            ]
+        ];
+
+        $costingHppFraksinasiIv56['allocationCostFraksinasiIv56'] = $allocationCostFraksinasiIv56;
+
+        return $costingHppFraksinasiIv56;
+    }
+
+    public function costingHppRefinery($laporanProduksi, $proCost, $alokasiCost, $dataDirect, $dataInDirect)
     {
         $cpoConsumeQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Refinery', 'CPO (Olah)');
         $rbdpoQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Refinery', 'RBDPO (Produksi)');
@@ -1953,46 +2226,7 @@ class Controller extends BaseController
         $rbdpoRendementPercentage = $cpoConsumeQty != 0 ? ($rbdpoQty / $cpoConsumeQty) * 100 : 0;
         $pfadRendementPercentage = $cpoConsumeQty != 0 ? ($pfadQty / $cpoConsumeQty) * 100 : 0;
 
-        $alokasiBiaya = $laporanProduksi['recap']['alokasiBiaya']['allocation'];
-
-        $alokasiCost = [
-            'Refinery' => [
-                'gasQty' => 0, 'gasPercentage' => 0,
-                'airQty' => 0, 'airPercentage' => 0,
-                'listrikQty' => 0, 'listrikPercentage' => 0
-            ],
-            'Fraksinasi' => [
-                'gasQty' => 0, 'gasPercentage' => 0,
-                'airQty' => 0, 'airPercentage' => 0,
-                'listrikQty' => 0, 'listrikPercentage' => 0
-            ]
-        ];
-
-        foreach ($alokasiBiaya as $alokasiItem) {
-            $type = $alokasiItem['nama'];
-            if (isset($alokasiCost[$type])) {
-                foreach ($alokasiItem['item'] as $item) {
-                    switch ($item['name']) {
-                        case "Steam / Gas":
-                            $alokasiCost[$type]['gasQty'] = $item['qty'];
-                            $alokasiCost[$type]['gasPercentage'] = $item['percentage'];
-                            break;
-                        case "Air":
-                            $alokasiCost[$type]['airQty'] = $item['qty'];
-                            $alokasiCost[$type]['airPercentage'] = $item['percentage'];
-                            break;
-                        case "Listrik":
-                            $alokasiCost[$type]['listrikQty'] = $item['qty'];
-                            $alokasiCost[$type]['listrikPercentage'] = $item['percentage'];
-                            break;
-                    }
-                }
-            }
-        }
-
         $produksiAllRefineryPercentage = 0;
-        // $produksiAllFraksinasiPercentage = 0;
-        // dd($laporanProduksi['produksiAll']);
         $produksiAll = $laporanProduksi['produksiAll'];
         if (isset($produksiAll['production']) && is_array($produksiAll['production'])) {
             foreach ($produksiAll['production'] as $production) {
@@ -2000,8 +2234,6 @@ class Controller extends BaseController
                     foreach ($production['items'] as $item) {
                         if ($item['name'] === 'Refinery') {
                             $produksiAllRefineryPercentage = $item['percentage'];
-                        // } elseif ($item['name'] === 'Fraksinasi') {
-                        //     $produksiAllFraksinasiPercentage = $item['percentage'];
                         }
                     }
                 }
@@ -2010,15 +2242,12 @@ class Controller extends BaseController
 
         $penyusutanAllocation = $laporanProduksi['biayaPenyusutanAllocation'];
         $penyusutanAllocationRefineryPercentage = 0;
-        // $penyusutanAllocationFraksinasiPercentage = 0;
 
         foreach ($penyusutanAllocation['columns'] as $column) {
             if ($column['name'] === '%') {
                 foreach ($column['alokasi'] as $alokasi) {
                     if ($alokasi['name'] === 'Refinery') {
                         $penyusutanAllocationRefineryPercentage = $alokasi['value'];
-                    // } elseif ($alokasi['name'] === 'Fraksinasi') {
-                    //     $penyusutanAllocationFraksinasiPercentage = $alokasi['value'];
                     }
                 }
             }
@@ -2034,16 +2263,16 @@ class Controller extends BaseController
         }
 
 
-        $bahanBakarProportionRefinery = $alokasiCost['Refinery']['gasPercentage'] ?? 100;
-        $othersProportionRefinery = $produksiAllRefineryPercentage ?? 100;
-        $analisaLabProportionRefinery = $produksiAllRefineryPercentage ?? 100;
-        $listrikProportionRefinery = $alokasiCost['Refinery']['listrikPercentage'] ?? 100;
-        $airProportionRefinery = $alokasiCost['Refinery']['airPercentage'] ?? 100;
-        $gajiPimpinanProportionRefinery = $produksiAllRefineryPercentage ?? 100;
-        $gajiPelaksanaProportionRefinery = $produksiAllRefineryPercentage ?? 100;
-        $asuransiPabrikProportionRefinery = $produksiAllRefineryPercentage ?? 100;
-        $bengkelProportionRefinery = $produksiAllRefineryPercentage ?? 100;
-        $depresiasiProportionRefinery = $penyusutanAllocationRefineryPercentage ?? 100;
+        $bahanBakarProportionRefinery = $alokasiCost['Refinery']['gasPercentage'] ?? 0;
+        $othersProportionRefinery = $produksiAllRefineryPercentage ?? 0;
+        $analisaLabProportionRefinery = $produksiAllRefineryPercentage ?? 0;
+        $listrikProportionRefinery = $alokasiCost['Refinery']['listrikPercentage'] ?? 0;
+        $airProportionRefinery = $alokasiCost['Refinery']['airPercentage'] ?? 0;
+        $gajiPimpinanProportionRefinery = $produksiAllRefineryPercentage ?? 0;
+        $gajiPelaksanaProportionRefinery = $produksiAllRefineryPercentage ?? 0;
+        $asuransiPabrikProportionRefinery = $produksiAllRefineryPercentage ?? 0;
+        $bengkelProportionRefinery = $produksiAllRefineryPercentage ?? 0;
+        $depresiasiProportionRefinery = $penyusutanAllocationRefineryPercentage ?? 0;
 
         $proportionDirectRefinery = [
             [
@@ -2099,8 +2328,8 @@ class Controller extends BaseController
 
         $rbdpoProportionRefinery = $proporsiBiayaPercentage['RBDPO'] ?? 0;
         $pfadProportionRefinery = $proporsiBiayaPercentage['PFAD'] ?? 0;
-        $rbdpoTotalValueRefinery = $totalCostRefinery * $rbdpoProportionRefinery / 100;
-        $pfadTotalValueRefinery = $totalCostRefinery * $pfadProportionRefinery / 100;
+        $rbdpoTotalValueRefinery = $totalCostRefinery * ($rbdpoProportionRefinery / 100);
+        $pfadTotalValueRefinery = $totalCostRefinery * ($pfadProportionRefinery / 100);
         $rbdpoRpPerKgRefinery = ($rbdpoQty != 0) ? ($rbdpoTotalValueRefinery / $rbdpoQty) : 0;
         $pfadRpPerKgRefinery = ($pfadQty != 0) ? ($pfadTotalValueRefinery / $pfadQty) : 0;
 
@@ -2137,8 +2366,67 @@ class Controller extends BaseController
     {
         $proCost = $this->processProCost($request);
         $laporanProduksi = $this->processPenyusutan($request);
+        $avgPrice = $this->processQtyBebanBlendingDowngradeForCostingHpp($request, $proCost, $laporanProduksi);
+
+        $alokasiBiaya = $laporanProduksi['recap']['alokasiBiaya']['allocation'];
+
+        $alokasiCost = [
+            'Refinery' => [
+                'gasQty' => 0, 'gasPercentage' => 0,
+                'airQty' => 0, 'airPercentage' => 0,
+                'listrikQty' => 0, 'listrikPercentage' => 0
+            ],
+            'Fraksinasi' => [
+                'gasQty' => 0, 'gasPercentage' => 0,
+                'airQty' => 0, 'airPercentage' => 0,
+                'listrikQty' => 0, 'listrikPercentage' => 0
+            ]
+        ];
+
+        foreach ($alokasiBiaya as $alokasiItem) {
+            $type = $alokasiItem['nama'];
+            if (isset($alokasiCost[$type])) {
+                foreach ($alokasiItem['item'] as $item) {
+                    switch ($item['name']) {
+                        case "Steam / Gas":
+                            $alokasiCost[$type]['gasQty'] = $item['qty'];
+                            $alokasiCost[$type]['gasPercentage'] = $item['percentage'];
+                            break;
+                        case "Air":
+                            $alokasiCost[$type]['airQty'] = $item['qty'];
+                            $alokasiCost[$type]['airPercentage'] = $item['percentage'];
+                            break;
+                        case "Listrik":
+                            $alokasiCost[$type]['listrikQty'] = $item['qty'];
+                            $alokasiCost[$type]['listrikPercentage'] = $item['percentage'];
+                            break;
+                    }
+                }
+            }
+        }
 
         $konversiLiterToKg = $this->settingGet('konversi_liter_to_kg')->setting_value;
+
+        $proporPercentFrak56 = 0;
+        $proporPercentFrak56PlusPackaging = 0;
+
+        foreach ($laporanProduksi['packagingNFraksinasi']['production'] as $production) {
+            if ($production['name'] === 'Fraksinasi') {
+                foreach ($production['items'] as $item) {
+                    if ($item['name'] === 'RBD Olein IV-56') {
+                        $proporPercentFrak56 = $item['percentage'];
+                        break;
+                    }
+                }
+            } elseif ($production['name'] === 'Packaging') {
+                foreach ($production['items'] as $item) {
+                    if ($item['name'] === 'RBD Olein IV-56') {
+                        $proporPercentFrak56PlusPackaging = $item['percentage'];
+                        break;
+                    }
+                }
+            }
+        }
 
         $settingDirectIdsRefinery = $this->getSettingIds([
             'coa_bahan_baku_cat2', 'coa_bahan_bakar_cat2', 'coa_bleaching_earth_cat2',
@@ -2151,18 +2439,39 @@ class Controller extends BaseController
             'coa_assuransi_pabrik_cat2', 'coa_limbah_pihak3_cat2', 'coa_bengkel_pemeliharaan_cat2', 'coa_depresiasi_cat2'
         ]);
 
+        $settingDirectIdsFraksinasi56 = $this->getSettingIds([
+            'coa_bahan_bakar_cat2', 'coa_others_cat2','coa_analisa_lab_cat2',
+            'coa_listrik_cat2', 'coa_air_cat2'
+        ]);
+
+        $settingInDirectIdsFraksinasi56 = $this->getSettingIds([
+            'coa_gaji_tunjangan_sosial_pimpinan_cat2', 'coa_gaji_tunjangan_sosial_pelaksana_cat2',
+            'coa_assuransi_pabrik_cat2', 'coa_bengkel_pemeliharaan_cat2', 'coa_depresiasi_cat2'
+        ]);
+
+        $settingPackagingCostFraksinasi56 = $this->getSettingIds([
+            'coa_gaji_dan_tunjangan_cat2', 'coa_minyakita_1L_cat2', 'coa_minyakita_2L_cat2',
+            'coa_bahan_kimia_cat2', 'coa_pengangkutan_langsir_cat2', 'coa_pengepakan_lain_cat2',
+            'coa_asuransi_gudang_filling_cat2', 'coa_depresiasi_cat2'
+        ]);
+
         $tanggal = Carbon::parse($request->tanggal);
         $generalLedgerData = $this->getGeneralLedgerData($tanggal);
 
         $dataDirectRef = $this->processGeneralLedger($request, $settingDirectIdsRefinery, $generalLedgerData);
         $dataInDirectRef = $this->processGeneralLedger($request, $settingInDirectIdsRefinery, $generalLedgerData);
+        $dataDirectFrak56 = $this->processGeneralLedger($request, $settingDirectIdsFraksinasi56, $generalLedgerData);
+        $dataInDirectFrak56 = $this->processGeneralLedger($request, $settingInDirectIdsFraksinasi56, $generalLedgerData);
+        $dataPackagingCostFrak56 = $this->processGeneralLedger($request, $settingPackagingCostFraksinasi56, $generalLedgerData);
 
-        $costingHppRefinery = $this->costingHppRefinery($laporanProduksi, $proCost, $dataDirectRef, $dataInDirectRef);
-        $costingHppFraksinasiIv56 = $this->costingHppFraksinasiIv56($laporanProduksi, $proCost, $konversiLiterToKg);
+        $costingHppRefinery = $this->costingHppRefinery($laporanProduksi, $proCost, $alokasiCost, $dataDirectRef, $dataInDirectRef);
+        $costingHppFraksinasiIv56 = $this->costingHppFraksinasiIv56($laporanProduksi, $alokasiCost, $proporPercentFrak56, $proporPercentFrak56PlusPackaging, $konversiLiterToKg, $dataDirectFrak56, $dataInDirectFrak56, $dataPackagingCostFrak56);
+        $rpPerKgRbdpoFraksinasiIv56 = $avgPrice['rbdpo']['rpPerKg'];
+        $costingHppFraksinasiIv56Next = $this->nextCostingHppFraksinasiIv56($costingHppFraksinasiIv56, $rpPerKgRbdpoFraksinasiIv56, $proCost);
 
         return [
             'costingHppRefinery' => $costingHppRefinery,
-            'costingHppFraksinasiIv56' => $costingHppFraksinasiIv56,
+            'costingHppFraksinasiIv56' => $costingHppFraksinasiIv56Next,
         ];
     }
 
@@ -2263,6 +2572,129 @@ class Controller extends BaseController
         ];
     }
 
+    public function processQtyBebanBlendingDowngradeForCostingHpp(Request $request,$proCost, $laporanProduksi)
+    {
+        $persediaanAwal = $this->persediaanAwal($request);
+        $qtyBebanProduksi = $this->processQtyBebanProduksi($request);
+        $allocationCostCostingHpp = $this->allocationCostCostingHpp($request, $proCost, $laporanProduksi);
+        $qtyBebanProduksiData = $qtyBebanProduksi['qtyBebanProduksi'];
+        $pengolahanBlendingDowngradeRbdpoQty = $qtyBebanProduksi['pengolahanBlendingDowngradeRbdpoQty'];
+        $rpPerKgQtyBebanProduksi = $this->processRpPerKgQtyBebanProduksi($qtyBebanProduksiData, $allocationCostCostingHpp);
+
+        $result = [];
+
+        foreach ($pengolahanBlendingDowngradeRbdpoQty as $key => $qty) {
+            $totalQty = 0;
+            $totalJumlah = 0;
+
+            foreach ($persediaanAwal['items'] as $item) {
+                if (strtolower($item['nama']) === strtolower($key)) {
+                    $totalQty += $item['qty'];
+                    $totalJumlah += $item['jumlah'];
+                    break;
+                }
+            }
+
+            if (isset($rpPerKgQtyBebanProduksi[$key])) {
+                $totalQty += $rpPerKgQtyBebanProduksi[$key]['qty'];
+                $totalJumlah += $rpPerKgQtyBebanProduksi[$key]['jumlah'];
+            }
+
+            $rpPerKg = $totalQty > 0 ? $totalJumlah / $totalQty : 0;
+
+            $jumlah = $qty * $rpPerKg;
+
+            $result[$key] = [
+                'qty' => $qty,
+                'rpPerKg' => $rpPerKg,
+                'jumlah' => $jumlah
+            ];
+        }
+
+        return $result;
+    }
+
+    public function avgPrice(Request $request)
+    {
+        $proCost = $this->processProCost($request);
+        $laporanProduksi = $this->processPenyusutan($request);
+
+        $persediaanAwal = $this->persediaanAwal($request);
+        $qtyBebanProduksi = $this->processQtyBebanProduksi($request);
+        $allocationCostCostingHpp = $this->allocationCostCostingHpp($request, $proCost, $laporanProduksi);
+        $qtyBebanProduksiData = $qtyBebanProduksi['qtyBebanProduksi'];
+        $pengolahanBlendingDowngradeRbdpoQty = $qtyBebanProduksi['pengolahanBlendingDowngradeRbdpoQty'];
+        $rpPerKgQtyBebanProduksi = $this->processRpPerKgQtyBebanProduksi($qtyBebanProduksiData, $allocationCostCostingHpp);
+        $processQtyBebanBlendingDowngrade = $this->processQtyBebanBlendingDowngrade($pengolahanBlendingDowngradeRbdpoQty, $persediaanAwal, $rpPerKgQtyBebanProduksi);
+        return [
+            'persediaanAwal' => $persediaanAwal,
+            'qtyBebanProduksi' => $rpPerKgQtyBebanProduksi,
+            'processQtyBebanBlendingDowngrade' => $processQtyBebanBlendingDowngrade,
+        ];
+    }
+
+    public function processRpPerKgQtyBebanProduksi($qtyBebanProduksi, $allocationCostCostingHpp)
+    {
+        $result = [];
+
+        foreach ($qtyBebanProduksi as $key => $qty) {
+            $rpPerKg = 0;
+
+            foreach ($allocationCostCostingHpp['allocationCostRefinery'] as $allocation) {
+                if (strtolower($allocation['nama']) === strtolower($key)) {
+                    $rpPerKg = $allocation['rpPerKg'];
+                    break;
+                }
+            }
+
+            $jumlah = $qty * $rpPerKg;
+
+            $result[$key] = [
+                'qty' => $qty,
+                'rpPerKg' => $rpPerKg,
+                'jumlah' => $jumlah
+            ];
+        }
+
+        return $result;
+    }
+
+    public function processQtyBebanBlendingDowngrade($pengolahanBlendingDowngradeRbdpoQty, $persediaanAwal, $rpPerKgQtyBebanProduksi)
+    {
+        $result = [];
+
+        foreach ($pengolahanBlendingDowngradeRbdpoQty as $key => $qty) {
+            $totalQty = 0;
+            $totalJumlah = 0;
+
+            foreach ($persediaanAwal['items'] as $item) {
+                if (strtolower($item['nama']) === strtolower($key)) {
+                    $totalQty += $item['qty'];
+                    $totalJumlah += $item['jumlah'];
+                    break;
+                }
+            }
+
+            if (isset($rpPerKgQtyBebanProduksi[$key])) {
+                $totalQty += $rpPerKgQtyBebanProduksi[$key]['qty'];
+                $totalJumlah += $rpPerKgQtyBebanProduksi[$key]['jumlah'];
+            }
+
+            $rpPerKg = $totalQty > 0 ? $totalJumlah / $totalQty : 0;
+
+            $jumlah = $qty * $rpPerKg;
+
+            $result[$key] = [
+                'qty' => $qty,
+                'rpPerKg' => $rpPerKg,
+                'jumlah' => $jumlah
+            ];
+        }
+
+        return $result;
+    }
+
+
     public function persediaanAwal(Request $request){
         $tanggal = $request->tanggal;
 
@@ -2309,11 +2741,8 @@ class Controller extends BaseController
 
     public function processQtyBebanProduksi(Request $request)
     {
-        $persediaanAwal = $this->persediaanAwal($request);
-
         $detAlloc = $this->processRecapData($request);
         $proCost = $this->processProCost($request);
-
         $extractedData = [
             'refinery' => [],
             'fraksinasi_iv56' => [],
@@ -2376,16 +2805,20 @@ class Controller extends BaseController
                                     ($extractedData['fraksinasi_iv58']['Produksi Fraksinasi IV-58']['RBDStearin'] ?? 0) +
                                     ($extractedData['fraksinasi_iv60']['Produksi Fraksinasi IV-60']['RBDStearin'] ?? 0);
 
+        $pengolahanBlendingDowngradeRbdpoQty = abs(-($extractedData['fraksinasi_iv56']['Produksi Fraksinasi IV-56']['RBDPO Olah'] ?? 0) -
+                                                ($extractedData['fraksinasi_iv57']['Produksi Fraksinasi IV-57']['RBDPO Olah'] ?? 0) -
+                                                ($extractedData['fraksinasi_iv58']['Produksi Fraksinasi IV-58']['RBDPO Olah'] ?? 0) -
+                                                ($extractedData['fraksinasi_iv60']['Produksi Fraksinasi IV-60']['RBDPO Olah'] ?? 0));
 
+        // $pengolahanBlendingDowngradeRbdpoRpPerKg =
+        // $pengolahanBlendingDowngradeRbdpoJumlah =
 
         return[
-            'persediaanAwal' => $persediaanAwal,
             'qtyBebanProduksi' => [
-                'pfad' => $qtyBebanProdPFAD,
                 'rbdpo' => $qtyBebanProdRBDPO,
-                'rbdStearin' => $qtyBebanProdRBDStearin,
-                'kemasanMinyakita' => $qtyBebanProdRBDOlein56Minyakita,
+                'pfad' => $qtyBebanProdPFAD,
                 'bulk56' => $qtyBebanProdRBDOlein56Bulk,
+                'kemasanMinyakita' => $qtyBebanProdRBDOlein56Minyakita,
                 'bulk57' => $qtyBebanProdRBDOlein57Bulk,
                 'kemasanINL' => $qtyBebanProdRBDOlein57INL,
                 'bulk58' => $qtyBebanProdRBDOlein58Bulk,
@@ -2393,13 +2826,90 @@ class Controller extends BaseController
                 'bulk60' => $qtyBebanProdRBDOlein60Bulk,
                 'kemasanSalvaco' => $qtyBebanProdRBDOlein60Salvaco,
                 'kemasanNusakita' => $qtyBebanProdRBDOlein60Nusakita,
+                'rbdStearin' => $qtyBebanProdRBDStearin,
+            ],
+            'pengolahanBlendingDowngradeRbdpoQty' =>[
+                'rbdpo' => $pengolahanBlendingDowngradeRbdpoQty,
+                'pfad' => 0,
+                'bulk56' => 0,
+                'kemasanMinyakita' => 0,
+                'bulk57' => 0,
+                'kemasanINL' => 0,
+                'bulk58' => 0,
+                'kemasan58' => 0,
+                'bulk60' => 0,
+                'kemasanSalvaco' => 0,
+                'kemasanNusakita' => 0,
+                'rbdStearin' => 0,
             ]
         ];
     }
 
-    public function processAvgPriceNext(Request $request){
-        $persediaanAwal = $this->processQtyBebanProduksi($request);
+    public function allocationCostCostingHpp(Request $request, $proCost, $laporanProduksi)
+    {
+        $alokasiBiaya = $laporanProduksi['recap']['alokasiBiaya']['allocation'];
 
+        $alokasiCost = [
+            'Refinery' => [
+                'gasQty' => 0, 'gasPercentage' => 0,
+                'airQty' => 0, 'airPercentage' => 0,
+                'listrikQty' => 0, 'listrikPercentage' => 0
+            ],
+            'Fraksinasi' => [
+                'gasQty' => 0, 'gasPercentage' => 0,
+                'airQty' => 0, 'airPercentage' => 0,
+                'listrikQty' => 0, 'listrikPercentage' => 0
+            ]
+        ];
+
+        foreach ($alokasiBiaya as $alokasiItem) {
+            $type = $alokasiItem['nama'];
+            if (isset($alokasiCost[$type])) {
+                foreach ($alokasiItem['item'] as $item) {
+                    switch ($item['name']) {
+                        case "Steam / Gas":
+                            $alokasiCost[$type]['gasQty'] = $item['qty'];
+                            $alokasiCost[$type]['gasPercentage'] = $item['percentage'];
+                            break;
+                        case "Air":
+                            $alokasiCost[$type]['airQty'] = $item['qty'];
+                            $alokasiCost[$type]['airPercentage'] = $item['percentage'];
+                            break;
+                        case "Listrik":
+                            $alokasiCost[$type]['listrikQty'] = $item['qty'];
+                            $alokasiCost[$type]['listrikPercentage'] = $item['percentage'];
+                            break;
+                    }
+                }
+            }
+        }
+
+        $settingDirectIdsRefinery = $this->getSettingIds([
+            'coa_bahan_baku_cat2', 'coa_bahan_bakar_cat2', 'coa_bleaching_earth_cat2',
+            'coa_phosporic_acid_cat2', 'coa_others_cat2','coa_analisa_lab_cat2',
+            'coa_listrik_cat2', 'coa_air_cat2'
+        ]);
+
+        $settingInDirectIdsRefinery = $this->getSettingIds([
+            'coa_gaji_tunjangan_sosial_pimpinan_cat2', 'coa_gaji_tunjangan_sosial_pelaksana_cat2',
+            'coa_assuransi_pabrik_cat2', 'coa_limbah_pihak3_cat2', 'coa_bengkel_pemeliharaan_cat2', 'coa_depresiasi_cat2'
+        ]);
+
+        $tanggal = Carbon::parse($request->tanggal);
+        $generalLedgerData = $this->getGeneralLedgerData($tanggal);
+
+        $dataDirectRef = $this->processGeneralLedger($request, $settingDirectIdsRefinery, $generalLedgerData);
+        $dataInDirectRef = $this->processGeneralLedger($request, $settingInDirectIdsRefinery, $generalLedgerData);
+
+        $costingHppRefinery = $this->costingHppRefinery($laporanProduksi, $proCost, $alokasiCost, $dataDirectRef, $dataInDirectRef);
+
+        return[
+            'allocationCostRefinery' => $costingHppRefinery['allocationCostRefinery']
+        ];
     }
+
+    // public function processQtyBebanPengolahanBlendingDowngrade(Request $request){
+    //     processProCost
+    // }
 
 }
