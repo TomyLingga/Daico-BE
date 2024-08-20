@@ -3884,25 +3884,6 @@ class Controller extends BaseController
         return $result;
     }
 
-    public function avgPrice(Request $request)
-    {
-        $proCost = $this->processProCost($request);
-        $laporanProduksi = $this->processPenyusutan($request);
-
-        $persediaanAwal = $this->persediaanAwal($request);
-        $qtyBebanProduksi = $this->processQtyBebanProduksi($request);
-        $allocationCostCostingHpp = $this->allocationCostCostingHpp($request, $proCost, $laporanProduksi);
-        $qtyBebanProduksiData = $qtyBebanProduksi['qtyBebanProduksi'];
-        $pengolahanBlendingDowngradeRbdpoQty = $qtyBebanProduksi['pengolahanBlendingDowngradeRbdpoQty'];
-        $rpPerKgQtyBebanProduksi = $this->processRpPerKgQtyBebanProduksi($qtyBebanProduksiData, $allocationCostCostingHpp);
-        $processQtyBebanBlendingDowngrade = $this->processQtyBebanBlendingDowngrade($pengolahanBlendingDowngradeRbdpoQty, $persediaanAwal, $rpPerKgQtyBebanProduksi);
-        return [
-            'persediaanAwal' => $persediaanAwal,
-            'qtyBebanProduksi' => $rpPerKgQtyBebanProduksi,
-            'processQtyBebanBlendingDowngrade' => $processQtyBebanBlendingDowngrade,
-        ];
-    }
-
     public function processRpPerKgQtyBebanProduksi($qtyBebanProduksi, $allocationCostCostingHpp)
     {
         $result = [];
@@ -3929,39 +3910,28 @@ class Controller extends BaseController
         return $result;
     }
 
-    public function processQtyBebanBlendingDowngrade($pengolahanBlendingDowngradeRbdpoQty, $persediaanAwal, $rpPerKgQtyBebanProduksi)
+    public function avgPrice(Request $request)
     {
-        $result = [];
+        $proCost = $this->processProCost($request);
+        $laporanProduksi = $this->processPenyusutan($request);
+        $costingHpp = $this->costingHppRecap($request);
 
-        foreach ($pengolahanBlendingDowngradeRbdpoQty as $key => $qty) {
-            $totalQty = 0;
-            $totalJumlah = 0;
+        $persediaanAwal = $this->persediaanAwal($request);
+        $qtyBebanProduksi = $this->processQtyBebanProduksi($request);
+        $pengolahanBlendingDowngradeRbdpoQty = $qtyBebanProduksi['pengolahanBlendingDowngradeRbdpoQty'];
+        $rpPerKgBebanProduksi = $this->processRpPerKgBebanProduksi($costingHpp);
+        $qtyNBebanProduksi = $this->processCombineRpPerKgAndQtyBebanProduksi($qtyBebanProduksi, $rpPerKgBebanProduksi);
 
-            foreach ($persediaanAwal['items'] as $item) {
-                if (strtolower($item['nama']) === strtolower($key)) {
-                    $totalQty += $item['qty'];
-                    $totalJumlah += $item['jumlah'];
-                    break;
-                }
-            }
+        $bebanBlendingDowngrade = $this->processQtyBebanBlendingDowngrade($pengolahanBlendingDowngradeRbdpoQty, $persediaanAwal, $qtyNBebanProduksi);
 
-            if (isset($rpPerKgQtyBebanProduksi[$key])) {
-                $totalQty += $rpPerKgQtyBebanProduksi[$key]['qty'];
-                $totalJumlah += $rpPerKgQtyBebanProduksi[$key]['jumlah'];
-            }
+        $stockTersedia = $this->processStokTersedia($persediaanAwal, $qtyNBebanProduksi, $bebanBlendingDowngrade);
 
-            $rpPerKg = $totalQty > 0 ? $totalJumlah / $totalQty : 0;
-
-            $jumlah = $qty * $rpPerKg;
-
-            $result[$key] = [
-                'qty' => $qty,
-                'rpPerKg' => $rpPerKg,
-                'jumlah' => $jumlah
-            ];
-        }
-
-        return $result;
+        return [
+            'persediaanAwal' => $persediaanAwal,
+            'produksiBebanProduksi' => $qtyNBebanProduksi,
+            'bebanBlendingDowngrade' => $bebanBlendingDowngrade,
+            'stockTersedia' => $stockTersedia,
+        ];
     }
 
 
@@ -3991,6 +3961,7 @@ class Controller extends BaseController
         $transformedPersediaanAwal = $persediaanAwal->map(function ($item) {
             return [
                 'id' => $item->extended_productable['id'],
+                'item_id' => $item->id ?? null,
                 'product_id' => $item->extended_productable['product_id'] ?? null,
                 'nama' => $item->extended_productable['nama'] ?? $item->extended_productable['name'],
                 'product' => $item->extended_productable['product'] ?? null,
@@ -4080,9 +4051,6 @@ class Controller extends BaseController
                                                 ($extractedData['fraksinasi_iv58']['Produksi Fraksinasi IV-58']['RBDPO Olah'] ?? 0) -
                                                 ($extractedData['fraksinasi_iv60']['Produksi Fraksinasi IV-60']['RBDPO Olah'] ?? 0));
 
-        // $pengolahanBlendingDowngradeRbdpoRpPerKg =
-        // $pengolahanBlendingDowngradeRbdpoJumlah =
-
         return[
             'qtyBebanProduksi' => [
                 'rbdpo' => $qtyBebanProdRBDPO,
@@ -4114,6 +4082,380 @@ class Controller extends BaseController
             ]
         ];
     }
+
+    public function processRpPerKgBebanProduksi($costingHpp)
+    {
+        $allocationCostingHppRefinery = $costingHpp['costingHppRefinery']['allocationCostRefinery'];
+
+        $rbdpoRpPerKg = null;
+        $pfadRpPerKg = null;
+
+        foreach ($allocationCostingHppRefinery as $item) {
+            if ($item['nama'] === 'RBDPO') {
+                $rbdpoRpPerKg = $item['rpPerKg'];
+            } elseif ($item['nama'] === 'PFAD') {
+                $pfadRpPerKg = $item['rpPerKg'];
+            }
+        }
+
+        $allocationCostingHppFrak56 = $costingHpp['costingHppFraksinasiIv56']['allocationCostFraksinasiIv56'];
+
+        $rbdOleinIv56RpPerKg = null;
+        $minyakita1LRpPerKg = null;
+        $minyakita2LRpPerKg = null;
+
+        foreach ($allocationCostingHppFrak56 as $item) {
+            if ($item['nama'] === 'RBD Olein IV-56') {
+                $rbdOleinIv56RpPerKg = $item['rpPerKg'];
+            } elseif ($item['nama'] === 'Minyakita - 1 Ltr') {
+                $minyakita1LRpPerKg = $item['rpPerKg'];
+            } elseif ($item['nama'] === 'Minyakita - 2 Ltr') {
+                $minyakita2LRpPerKg = $item['rpPerKg'];
+            }
+        }
+
+        $minyakita1LiterCostingHppFrak56 = $costingHpp['costingHppFraksinasiIv56']['minyakita1Liter']['totalQty'];
+        $minyakita2LiterCostingHppFrak56 = $costingHpp['costingHppFraksinasiIv56']['minyakita2Liter']['totalQty'];
+        $minyakitaCostingHppFrak56 = $minyakita1LiterCostingHppFrak56 + $minyakita2LiterCostingHppFrak56;
+
+        $minyakitaKemasanRpPerKg = $minyakitaCostingHppFrak56 > 0
+        ? ($minyakita1LRpPerKg + $minyakita2LRpPerKg) / $minyakitaCostingHppFrak56
+        : 0;
+
+        $allocationCostingHppFrak57 = $costingHpp['costingHppFraksinasiIv57']['allocationCostFraksinasiIv57'];
+
+        $rbdOleinIv57RpPerKg = null;
+        $inl250MlRpPerKg = null;
+        $inl450MlRpPerKg = null;
+        $inl900MlRpPerKg = null;
+        $inl1800MlRpPerKg = null;
+
+        foreach ($allocationCostingHppFrak57 as $item) {
+            if ($item['nama'] === 'RBD Olein IV-57') {
+                $rbdOleinIv57RpPerKg = $item['rpPerKg'];
+            } elseif ($item['nama'] === 'INL - 250ml') {
+                $inl250MlRpPerKg = $item['rpPerKg'];
+            } elseif ($item['nama'] === 'INL - 450ml') {
+                $inl450MlRpPerKg = $item['rpPerKg'];
+            } elseif ($item['nama'] === 'INL - 900ml') {
+                $inl900MlRpPerKg = $item['rpPerKg'];
+            } elseif ($item['nama'] === 'INL - 1800ml') {
+                $inl1800MlRpPerKg = $item['rpPerKg'];
+            }
+        }
+
+        $inl250mlCostingHppFrak57 = $costingHpp['costingHppFraksinasiIv57']['inl250mL']['totalQty'];
+        $inl450mlCostingHppFrak57 = $costingHpp['costingHppFraksinasiIv57']['inl450mL']['totalQty'];
+        $inl900mlCostingHppFrak57 = $costingHpp['costingHppFraksinasiIv57']['inl900mL']['totalQty'];
+        $inl1800mlCostingHppFrak57 = $costingHpp['costingHppFraksinasiIv57']['inl1800mL']['totalQty'];
+
+        $inlCostingHppFrak57 = $inl250mlCostingHppFrak57+$inl450mlCostingHppFrak57+$inl900mlCostingHppFrak57+$inl1800mlCostingHppFrak57;
+
+        $inlKemasanRpPerKg = $inlCostingHppFrak57 > 0
+        ? ($inl250MlRpPerKg + $inl450MlRpPerKg + $inl900MlRpPerKg + $inl1800MlRpPerKg) / $inlCostingHppFrak57
+        : 0;
+
+        $allocationCostingHppFrak58 = $costingHpp['costingHppFraksinasiIv58']['allocationCostFraksinasiIv58'];
+
+        $rbdOleinIv58RpPerKg = null;
+        foreach ($allocationCostingHppFrak58 as $item) {
+            if ($item['nama'] === 'RBD Olein IV-58') {
+                $rbdOleinIv57RpPerKg = $item['rpPerKg'];
+            }
+            break;
+        }
+
+        $kemasanRpPerKg = 0;
+
+        $allocationCostingHppFrak60 = $costingHpp['costingHppFraksinasiIv60']['allocationCostFraksinasiIv60'];
+
+        $rbdOleinIv60RpPerKg = null;
+        $salvaco1LRpPerKg = null;
+        $salvaco2LRpPerKg = null;
+        $nusakita1LPerKg = null;
+        $nusakita2LRpPerKg = null;
+
+        foreach ($allocationCostingHppFrak60 as $item) {
+            if ($item['nama'] === 'RBD Olein IV-60') {
+                $rbdOleinIv60RpPerKg = $item['rpPerKg'];
+            } elseif ($item['nama'] === 'Salvaco - 1 Ltr') {
+                $salvaco1LRpPerKg = $item['rpPerKg'];
+            } elseif ($item['nama'] === 'Salvaco - 2 Ltr') {
+                $salvaco2LRpPerKg = $item['rpPerKg'];
+            } elseif ($item['nama'] === 'Nusakita - 1 Ltr') {
+                $nusakita1LPerKg = $item['rpPerKg'];
+            } elseif ($item['nama'] === 'Nusakita - 2 Ltr') {
+                $nusakita2LRpPerKg = $item['rpPerKg'];
+            }
+        }
+
+        $salvaco1LiterCostingHppFrak60 = $costingHpp['costingHppFraksinasiIv60']['salvaco1L']['totalQty'];
+        $salvaco2LiterCostingHppFrak60 = $costingHpp['costingHppFraksinasiIv60']['salvaco2L']['totalQty'];
+        $salvacoCostingHppFrak60 = $salvaco1LiterCostingHppFrak60 + $salvaco2LiterCostingHppFrak60;
+
+        $salvacoKemasanRpPerKg = $salvacoCostingHppFrak60 > 0
+        ? ($salvaco1LRpPerKg + $salvaco2LRpPerKg) / $salvacoCostingHppFrak60
+        : 0;
+
+        $nusakita1LiterCostingHppFrak60 = $costingHpp['costingHppFraksinasiIv60']['nusakita1L']['totalQty'];
+        $nusakita2LiterCostingHppFrak60 = $costingHpp['costingHppFraksinasiIv60']['nusakita2L']['totalQty'];
+        $nusakitaCostingHppFrak60 = $nusakita1LiterCostingHppFrak60 + $nusakita2LiterCostingHppFrak60;
+
+        $nusakitaKemasanRpPerKg = $nusakitaCostingHppFrak60 > 0
+        ? ($nusakita1LPerKg + $nusakita2LRpPerKg) / $nusakitaCostingHppFrak60
+        : 0;
+
+        $rbdStearingCostingHpp = $costingHpp['rbdStearinTotal']['RpPerKg'];
+
+        return[
+            'rbdpo' => $rbdpoRpPerKg,
+            'pfad' => $pfadRpPerKg,
+            'bulk56' => $rbdOleinIv56RpPerKg,
+            'kemasanMinyakita' => $minyakitaKemasanRpPerKg,
+            'bulk57' => $rbdOleinIv57RpPerKg,
+            'kemasanINL' => $inlKemasanRpPerKg,
+            'bulk58' => $rbdOleinIv58RpPerKg,
+            'kemasan58' => $kemasanRpPerKg,
+            'bulk60' => $rbdOleinIv60RpPerKg,
+            'kemasanSalvaco' => $salvacoKemasanRpPerKg,
+            'kemasanNusakita' => $nusakitaKemasanRpPerKg,
+            'rbdStearin' => $rbdStearingCostingHpp,
+        ];
+
+    }
+
+    public function processCombineRpPerKgAndQtyBebanProduksi($qtyBebanProduksi, $rpPerKgBebanProduksi)
+    {
+        $totalQty = 0;
+        $totalJumlah = 0;
+
+        $produksiBebanProduksi = [];
+
+        foreach ($qtyBebanProduksi['qtyBebanProduksi'] as $name => $qty) {
+            $rpPerKg = $rpPerKgBebanProduksi[$name] ?? 0;
+
+            $jumlah = $qty * $rpPerKg;
+
+            $totalQty += $qty;
+            $totalJumlah += $jumlah;
+
+            $produksiBebanProduksi[] = [
+                'name' => $name,
+                'qty' => $qty,
+                'rpPerKg' => $rpPerKg,
+                'jumlah' => $jumlah,
+            ];
+        }
+
+        $totalRpPerKg = $totalQty > 0 ? $totalJumlah / $totalQty : 0;
+
+        $result = [
+            'totalQty' => $totalQty,
+            'totalJumlah' => $totalJumlah,
+            'totalRpPerKg' => $totalRpPerKg,
+            'items' => $produksiBebanProduksi,
+        ];
+
+        return $result;
+    }
+
+    public function processQtyBebanBlendingDowngrade($pengolahanBlendingDowngradeRbdpoQty, $persediaanAwal, $qtyNBebanProduksi)
+    {
+        $totalQty = 0;
+        $totalJumlah = 0;
+
+        $items = [];
+
+        $persediaanAwalMap = [];
+        foreach ($persediaanAwal['items'] as $item) {
+            $persediaanAwalMap[strtolower($item['nama'])] = $item;
+        }
+
+        $qtyNBebanProduksiMap = [];
+        foreach ($qtyNBebanProduksi['items'] as $item) {
+            $qtyNBebanProduksiMap[$item['name']] = $item;
+        }
+
+        foreach ($qtyNBebanProduksiMap as $name => $data) {
+            $persediaanAwalItem = $persediaanAwalMap[$name] ?? null;
+            $qty = $pengolahanBlendingDowngradeRbdpoQty[$name] ?? 0;
+            $rpPerKg = 0;
+            $jumlah = 0;
+
+            if ($persediaanAwalItem && isset($qtyNBebanProduksiMap[$name])) {
+                $totalQtyItem = $persediaanAwalItem['qty'] + $qtyNBebanProduksiMap[$name]['qty'];
+                if ($totalQtyItem > 0) {
+                    $rpPerKg = ($persediaanAwalItem['jumlah'] + $qtyNBebanProduksiMap[$name]['jumlah']) / $totalQtyItem;
+                }
+                $jumlah = $qty * $rpPerKg;
+            }
+
+            $items[] = [
+                'name' => $name,
+                'qty' => $qty,
+                'rpPerKg' => $rpPerKg,
+                'jumlah' => $jumlah,
+            ];
+
+            $totalQty += $qty;
+            $totalJumlah += $jumlah;
+        }
+
+        $totalRpPerKg = $totalQty > 0 ? $totalJumlah / $totalQty : 0;
+
+        return [
+            'totalQty' => $totalQty,
+            'totalJumlah' => $totalJumlah,
+            'totalRpPerKg' => $totalRpPerKg,
+            'items' => $items,
+        ];
+    }
+
+    // public function processStokTersedia($persediaanAwal)
+    public function processStokTersedia($persediaanAwal, $qtyNBebanProduksi, $bebanBlendingDowngrade)
+    {
+        $resultPersediaanAwal = [
+            'totalQty' => $persediaanAwal['totalQty'],
+            'totalJumlah' => $persediaanAwal['totalJumlah'],
+            'totalRpPerKg' => $persediaanAwal['totalHarga'],
+            'items' => []
+        ];
+
+        $nameMappings = [
+            'RBDPO' => 'rbdpo',
+            'PFAD' => 'pfad',
+            'RBD Stearin' => 'rbdStearin',
+            'RBD Olein' => [
+                'IV 56' => [
+                    'Bulk' => 'bulk56',
+                    'Kemasan (Minyakita)' => 'kemasanMinyakita'
+                ],
+                'IV 57' => [
+                    'Bulk' => 'bulk57',
+                    'Kemasan (INL)' => 'kemasanINL'
+                ],
+                'IV 58' => [
+                    'Bulk' => 'bulk58',
+                    'Kemasan' => 'kemasan58'
+                ],
+                'IV 60' => [
+                    'Bulk' => 'bulk60',
+                    'Kemasan (Salvaco)' => 'kemasanSalvaco',
+                    'Kemasan (Nusakita)' => 'kemasanNusakita'
+                ]
+            ]
+        ];
+
+        foreach ($persediaanAwal['items'] as $item) {
+            $itemName = $item['nama'];
+            $mappedName = '';
+
+            if ($itemName === 'RBD Stearin') {
+                $mappedName = $nameMappings['RBD Stearin'];
+            } elseif ($itemName === 'RBDPO') {
+                $mappedName = $nameMappings['RBDPO'];
+            } elseif ($itemName === 'PFAD') {
+                $mappedName = $nameMappings['PFAD'];
+            } elseif (isset($nameMappings['RBD Olein'])) {
+                $productName = $item['product']['nama'] ?? '';
+                $productMapping = $nameMappings['RBD Olein'][$productName] ?? [];
+                $mappedName = $productMapping[$itemName] ?? '';
+            }
+
+            if ($mappedName) {
+                $resultPersediaanAwal['items'][] = [
+                    'name' => $mappedName,
+                    'qty' => $item['qty'],
+                    'rpPerKg' => $item['harga'],
+                    'jumlah' => $item['jumlah']
+                ];
+            }
+        }
+
+        $combinedItems = [];
+
+        function combineData($items, &$combinedItems) {
+            foreach ($items as $item) {
+                $name = $item['name'];
+                if (!isset($combinedItems[$name])) {
+                    $combinedItems[$name] = [
+                        'name' => $name,
+                        'qty' => 0,
+                        'jumlah' => 0,
+                        'rpPerKg' => 0
+                    ];
+                }
+                $combinedItems[$name]['qty'] += (float) $item['qty'];
+                $combinedItems[$name]['jumlah'] += (float) $item['jumlah'];
+            }
+        }
+
+        combineData($resultPersediaanAwal['items'], $combinedItems);
+        combineData($qtyNBebanProduksi['items'], $combinedItems);
+        combineData($bebanBlendingDowngrade['items'], $combinedItems);
+
+        $totalQty = 0;
+        $totalJumlah = 0;
+        foreach ($combinedItems as $item) {
+            $totalQty += $item['qty'];
+            $totalJumlah += $item['jumlah'];
+        }
+        $totalRpPerKg = $totalQty ? $totalJumlah / $totalQty : 0;
+
+        foreach ($combinedItems as &$item) {
+            $item['rpPerKg'] = $item['qty'] ? $item['jumlah'] / $item['qty'] : 0;
+        }
+
+        $stokTersedia = [
+            'totalQty' => $totalQty,
+            'totalJumlah' => $totalJumlah,
+            'totalRpPerKg' => $totalRpPerKg,
+            'items' => array_values($combinedItems)
+        ];
+
+        return $stokTersedia;
+
+    }
+
+
+
+
+
+    // public function processQtyBebanBlendingDowngrade($pengolahanBlendingDowngradeRbdpoQty, $persediaanAwal, $rpPerKgQtyBebanProduksi)
+    // {
+    //     $result = [];
+
+    //     foreach ($pengolahanBlendingDowngradeRbdpoQty as $key => $qty) {
+    //         $totalQty = 0;
+    //         $totalJumlah = 0;
+
+    //         foreach ($persediaanAwal['items'] as $item) {
+    //             if (strtolower($item['nama']) === strtolower($key)) {
+    //                 $totalQty += $item['qty'];
+    //                 $totalJumlah += $item['jumlah'];
+    //                 break;
+    //             }
+    //         }
+
+    //         if (isset($rpPerKgQtyBebanProduksi[$key])) {
+    //             $totalQty += $rpPerKgQtyBebanProduksi[$key]['qty'];
+    //             $totalJumlah += $rpPerKgQtyBebanProduksi[$key]['jumlah'];
+    //         }
+
+    //         $rpPerKg = $totalQty > 0 ? $totalJumlah / $totalQty : 0;
+
+    //         $jumlah = $qty * $rpPerKg;
+
+    //         $result[$key] = [
+    //             'qty' => $qty,
+    //             'rpPerKg' => $rpPerKg,
+    //             'jumlah' => $jumlah
+    //         ];
+    //     }
+
+    //     return $result;
+    // }
+
 
     public function allocationCostCostingHpp(Request $request, $proCost, $laporanProduksi)
     {
