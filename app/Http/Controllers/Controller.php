@@ -1903,6 +1903,1075 @@ class Controller extends BaseController
         return $totalQty;
     }
 
+    public function costingHppControll($costingHppRefinery, $costingHppFraksinasiIv56Next, $costingHppFraksinasiIv57Next, $costingHppFraksinasiIv58Next, $costingHppFraksinasiIv60Next, $resultRBDStearin, $costProd, $bebanBlendingDowngrade)
+    {
+        $bebanBlendingDowngradeTotalQty = 0;
+        $bebanBlendingDowngradeTotalJumlah = 0;
+
+        foreach ($bebanBlendingDowngrade as $value) {
+            $bebanBlendingDowngradeTotalQty += $value['qty'];
+            $bebanBlendingDowngradeTotalJumlah += $value['jumlah'];
+        }
+
+        $bebanBlendingDowngradeTotalRpPerKg = $bebanBlendingDowngradeTotalQty > 0 ? $bebanBlendingDowngradeTotalJumlah / $bebanBlendingDowngradeTotalQty : 0;
+
+        $bebanBlendingDowngradeTotalResult = [
+            'totalQty' => $bebanBlendingDowngradeTotalQty,
+            'totalRpPerKg' => $bebanBlendingDowngradeTotalRpPerKg,
+            'totalJumlah' => $bebanBlendingDowngradeTotalJumlah,
+        ];
+
+        $arrays = [
+            $costingHppRefinery,
+            $costingHppFraksinasiIv56Next,
+            $costingHppFraksinasiIv57Next,
+            $costingHppFraksinasiIv58Next,
+            $costingHppFraksinasiIv60Next,
+        ];
+
+        $totalCosts = [
+            'Bahan Baku' => 0,
+            'Bahan Bakar' => 0,
+            'Bleaching Earth (BE)' => 0,
+            'Phosporic Acid (PA)' => 0,
+            'Others' => 0,
+            'Biaya Analisa & Laboratorium' => 0,
+            'Biaya Listrik' => 0,
+            'Biaya Air' => 0,
+            'Gaji, Tunjangan & Biaya Sosial Karyawan Pimpinan' => 0,
+            'Gaji, Tunjangan & Biaya Sosial Karyawan Pelaksana' => 0,
+            'Biaya Assuransi Pabrik' => 0,
+            'Biaya Bengkel & Pemeliharaan' => 0,
+            'Depresiasi' => 0,
+            'Gaji & Tunjangan' => 0,
+            'Bahan Kimia' => 0,
+            'Pengangkutan / Langsir' => 0,
+            'Bahan Pengepakan Lainnya' => 0,
+            'Biaya Asuransi Gudang & Filling' => 0,
+            'Minyakita - 1 Ltr' => 0,
+            'Minyakita - 2 Ltr' => 0,
+            'INL - 250ml' => 0,
+            'INL - 450ml' => 0,
+            'INL - 900ml' => 0,
+            'INL - 1800ml' => 0,
+            'Salvaco - 1 Ltr' => 0,
+            'Salvaco - 2 Ltr' => 0,
+            'Nusakita - 1 Ltr' => 0,
+            'Nusakita - 2 Ltr' => 0,
+        ];
+
+        $dataSources = ['dataDirect', 'dataInDirect', 'dataPackaging'];
+
+        foreach ($arrays as $array) {
+            foreach ($dataSources as $source) {
+                if (isset($array[$source]['cost'])) {
+                    foreach ($array[$source]['cost'] as $cost) {
+                        foreach ($cost['item'] as $item) {
+                            if (isset($totalCosts[$item['name']])) {
+                                $totalCosts[$item['name']] += $item['totalValue'];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $totalCosts['Bahan Baku'] += $bebanBlendingDowngradeTotalResult['totalJumlah'];
+        $resultArray = [];
+
+        $totalQty = 0;
+        $totalCostProd = 0;
+        $totalSelisih = 0;
+
+        $mapping = [
+            'INL' => 'INL - 250ml',
+            'Salvaco' => 'Salvaco - 1 Ltr',
+            'Minyakita' => 'Minyakita - 1 Ltr',
+            'Nusakita' => 'Nusakita - 1 Ltr',
+        ];
+
+        foreach ($totalCosts as $name => $qty) {
+            $mappedName = array_search($name, $mapping) !== false ? array_search($name, $mapping) : $name;
+
+            $matchedProd = collect($costProd['data'])->firstWhere('nama', $mappedName);
+
+            $costProdValue = $matchedProd ? $matchedProd['result'] : 0;
+            $selisih = $qty - $costProdValue;
+
+            $item = [
+                'name' => $name,
+                'qty' => $qty,
+                'costProd' => $costProdValue,
+                'selisih' => $selisih,
+            ];
+
+            $resultArray[] = $item;
+
+            $totalQty += $qty;
+            $totalCostProd += $costProdValue;
+            $totalSelisih += $selisih;
+        }
+
+        return [
+            'details' => $resultArray,
+            'totals' => [
+                'totalQty' => $totalQty,
+                'totalCostProd' => $totalCostProd,
+                'totalSelisih' => $totalSelisih,
+            ],
+        ];
+    }
+
+    public function costingHppFraksinasiIv60($laporanProduksi, $alokasiCost, $proporPercentFrak60, $proporPercentFrak60PlusPackaging, $konversiLiterToKg, $dataDirectFrak60, $dataInDirectFrak60, $dataPackagingCostFrak60)
+    {
+        $rbdpoConsumeQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-60)', 'RBDPO (Olah)');
+        $rbdOleinIv60Qty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-60)', 'RBD Olein IV 60 (Produksi)');
+        $rbdStearinQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-60)', 'RBD Stearin (Produksi)');
+        $oleinConsumeSalvacoQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (Salvaco)', 'Olein IV 60 Consume');
+        $oleinConsumeNusakitaQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (Nusakita)', 'Olein IV 60 Consume');
+
+        $rbdOleinIv60RendementPercentage = $rbdpoConsumeQty != 0 ? ($rbdOleinIv60Qty / $rbdpoConsumeQty) * 100 : 0;
+        $rbdStearinRendementPercentage = $rbdpoConsumeQty != 0 ? ($rbdStearinQty / $rbdpoConsumeQty) * 100 : 0;
+        $cartonSalvaco1LProportion = $konversiLiterToKg;
+        $cartonSalvaco2LProportion = $konversiLiterToKg;
+        $cartonNusakita1LProportion = $konversiLiterToKg;
+        $cartonNusakita2LProportion = $konversiLiterToKg;
+        $cartonSalvaco1LQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (Salvaco)', 'Carton Salvaco 1 Liter');
+        $cartonSalvaco2LQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (Salvaco)', 'Carton Salvaco 2 Liter');
+        $cartonNusakita1LQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (Nusakita)', 'Carton Nusakita 1 Liter');
+        $cartonNusakita2LQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (Nusakita)', 'Carton Nusakita 2 Liter');
+
+        $cartonSalvacoQty = $cartonSalvaco1LQty + $cartonSalvaco2LQty;
+
+        $cartonNusakitaQty = $cartonNusakita1LQty + $cartonNusakita2LQty;
+
+        $cartonSalvaco1LPercent = $cartonSalvacoQty != 0 ? ($cartonSalvaco1LQty / $cartonSalvacoQty) * 100 : 0;
+        $cartonSalvaco2LPercent = $cartonSalvacoQty != 0 ? ($cartonSalvaco2LQty / $cartonSalvacoQty) * 100 : 0;
+        $cartonNusakita1LPercent = $cartonNusakitaQty != 0 ? ($cartonNusakita1LQty / $cartonNusakitaQty) * 100 : 0;
+        $cartonNusakita2LPercent = $cartonNusakitaQty != 0 ? ($cartonNusakita2LQty / $cartonNusakitaQty) * 100 : 0;
+
+        $cartonSalvacoTotalQty = $cartonSalvacoQty*$konversiLiterToKg;
+        $cartonNusakitaTotalQty = $cartonNusakitaQty*$konversiLiterToKg;
+
+        $additionalSalvaco = abs($oleinConsumeSalvacoQty - $cartonSalvacoTotalQty);    // abs = alwasy positive
+        $additionalNusakita = abs($oleinConsumeNusakitaQty - $cartonNusakitaTotalQty);    // abs = alwasy positive
+
+        $salvaco1LTotalQty = ($cartonSalvaco1LQty*$cartonSalvaco1LProportion)+($additionalSalvaco*($cartonSalvaco1LPercent/100));
+        $salvaco2LTotalQty = ($cartonSalvaco2LQty*$cartonSalvaco2LProportion)+($additionalSalvaco*($cartonSalvaco2LPercent/100));
+        $nusakita1LTotalQty = ($cartonNusakita1LQty*$cartonNusakita1LProportion)+($additionalNusakita*($cartonNusakita1LPercent/100));
+        $nusakita2LTotalQty = ($cartonNusakita2LQty*$cartonNusakita2LProportion)+($additionalNusakita*($cartonNusakita2LPercent/100));
+
+        $totalSalvacoQty = $salvaco1LTotalQty + $salvaco2LTotalQty;
+        $totalNusakitaQty = $nusakita1LTotalQty + $nusakita2LTotalQty;
+
+        $salvaco1LRendementPercentage = $totalSalvacoQty != 0 ? ($salvaco1LTotalQty / $totalSalvacoQty) * 100 : 0;
+        $salvaco2LRendementPercentage = $totalSalvacoQty != 0 ? ($salvaco2LTotalQty / $totalSalvacoQty) * 100 : 0;
+        $nusakita1LRendementPercentage = $totalNusakitaQty != 0 ? ($nusakita1LTotalQty / $totalNusakitaQty) * 100 : 0;
+        $nusakita2LRendementPercentage = $totalNusakitaQty != 0 ? ($nusakita2LTotalQty / $totalNusakitaQty) * 100 : 0;
+
+        $produksiAll = $laporanProduksi['produksiAll'];
+        $produksiAllFraksinasiPercentage = 0;
+
+        if (isset($produksiAll['production']) && is_array($produksiAll['production'])) {
+            foreach ($produksiAll['production'] as $production) {
+                if (isset($production['items']) && is_array($production['items'])) {
+                    foreach ($production['items'] as $item) {
+                        if ($item['name'] === 'Fraksinasi') {
+                            $produksiAllFraksinasiPercentage = $item['percentage'];
+                        }
+                    }
+                }
+            }
+        }
+
+        $penyusutanAllocation = $laporanProduksi['biayaPenyusutanAllocation'];
+        $penyusutanAllocationFraksinasiPercentage = 0;
+
+        foreach ($penyusutanAllocation['columns'] as $column) {
+            if ($column['name'] === '%') {
+                foreach ($column['alokasi'] as $alokasi) {
+                    if ($alokasi['name'] === 'Fraksinasi') {
+                        $penyusutanAllocationFraksinasiPercentage = $alokasi['value'];
+                    }
+                }
+            }
+        }
+
+        $bahanBakarProportionFrak60 = $alokasiCost['Fraksinasi']['gasPercentage'] ?? 0;
+        $othersProportionFrak60 = $produksiAllFraksinasiPercentage;
+        $analisaLabProportionFrak60 = $othersProportionFrak60;
+        $listrikProportionFrak60 = $alokasiCost['Fraksinasi']['listrikPercentage'] ?? 0;
+        $airProportionFrak60 = $alokasiCost['Fraksinasi']['airPercentage'] ?? 0;
+        $gajiPimpinanProportionFrak60 = $othersProportionFrak60 ?? 0;
+        $gajiPelaksanaProportionFrak60 = $othersProportionFrak60 ?? 0;
+        $asuransiPabrikProportionFrak60 = $othersProportionFrak60 ?? 0;
+        $bengkelProportionFrak60 = $othersProportionFrak60 ?? 0;
+        $depresiasiProportionFrak60 = $penyusutanAllocationFraksinasiPercentage ?? 0;
+
+        $proportionDirectFrak60 = [
+            [
+                'nama' => 'Bahan Bakar',
+                'proportion' => $bahanBakarProportionFrak60,
+                'proportion2' => $proporPercentFrak60,
+            ],
+            [
+                'nama' => 'Others',
+                'proportion' => $othersProportionFrak60,
+                'proportion2' => $proporPercentFrak60,
+            ],
+            [
+                'nama' => 'Biaya Analisa & Laboratorium',
+                'proportion' => $analisaLabProportionFrak60,
+                'proportion2' => $proporPercentFrak60,
+            ],
+            [
+                'nama' => 'Biaya Listrik',
+                'proportion' => $listrikProportionFrak60,
+                'proportion2' => $proporPercentFrak60,
+            ],
+            [
+                'nama' => 'Biaya Air',
+                'proportion' => $airProportionFrak60,
+                'proportion2' => $proporPercentFrak60,
+            ],
+        ];
+
+        $proportionInDirectFrak60 = [
+            [
+                'nama' => 'Gaji, Tunjangan & Biaya Sosial Karyawan Pimpinan',
+                'proportion' => $gajiPimpinanProportionFrak60,
+                'proportion2' => $proporPercentFrak60,
+            ],
+            [
+                'nama' => 'Gaji, Tunjangan & Biaya Sosial Karyawan Pelaksana',
+                'proportion' => $gajiPelaksanaProportionFrak60,
+                'proportion2' => $proporPercentFrak60,
+            ],
+            [
+                'nama' => 'Biaya Assuransi Pabrik',
+                'proportion' => $asuransiPabrikProportionFrak60,
+                'proportion2' => $proporPercentFrak60,
+            ],
+            [
+                'nama' => 'Biaya Bengkel & Pemeliharaan',
+                'proportion' => $bengkelProportionFrak60,
+                'proportion2' => $proporPercentFrak60,
+            ],
+            [
+                'nama' => 'Depresiasi',
+                'proportion' => $depresiasiProportionFrak60,
+                'proportion2' => $proporPercentFrak60,
+            ],
+        ];
+
+        $proportionPackagingFrak60 = [
+            [
+                'nama' => 'Gaji & Tunjangan',
+                'proportion' => $proporPercentFrak60PlusPackaging,
+            ],
+            [
+                'nama' => 'Bahan Kimia',
+                'proportion' => $proporPercentFrak60PlusPackaging,
+            ],
+            [
+                'nama' => 'Pengangkutan / Langsir',
+                'proportion' => $proporPercentFrak60PlusPackaging,
+            ],
+            [
+                'nama' => 'Bahan Pengepakan Lainnya',
+                'proportion' => $proporPercentFrak60PlusPackaging,
+            ],
+            [
+                'nama' => 'Biaya Asuransi Gudang & Filling',
+                'proportion' => $proporPercentFrak60PlusPackaging,
+            ],
+            [
+                'nama' => 'Depresiasi',
+                'proportion' => $proporPercentFrak60PlusPackaging,
+            ],
+        ];
+
+        $directCost = $this->generateCostOutput('Fraksinasi IV-60', $dataDirectFrak60, $rbdpoConsumeQty, $proportionDirectFrak60);
+        $inDirectCost = $this->generateCostOutput('Fraksinasi IV-60', $dataInDirectFrak60, $rbdpoConsumeQty, $proportionInDirectFrak60);
+        $packagingCost = $this->generateCostOutput('Fraksinasi IV-60', $dataPackagingCostFrak60, $rbdpoConsumeQty, $proportionPackagingFrak60);
+
+        return [
+            'rbdpoConsume' => $rbdpoConsumeQty,
+            'rbdOleinIv60Qty' => $rbdOleinIv60Qty,
+            'rbdStearinQty' => $rbdStearinQty,
+            'rbdOleinIv60RendementPercentage' => $rbdOleinIv60RendementPercentage,
+            'rbdStearinRendementPercentage' => $rbdStearinRendementPercentage,
+            'salvaco1L' => [
+                'proportion' => $cartonSalvaco1LProportion,
+                'proportionPercentage' => $cartonSalvaco1LPercent,
+                'totalQty' => $salvaco1LTotalQty,
+                'rendementPercentage' => $salvaco1LRendementPercentage,
+            ],
+            'salvaco2L' => [
+                'proportion' => $cartonSalvaco2LProportion,
+                'proportionPercentage' => $cartonSalvaco2LPercent,
+                'totalQty' => $salvaco2LTotalQty,
+                'rendementPercentage' => $salvaco2LRendementPercentage,
+            ],
+            'nusakita1L' => [
+                'proportion' => $cartonNusakita1LProportion,
+                'proportionPercentage' => $cartonNusakita1LPercent,
+                'totalQty' => $nusakita1LTotalQty,
+                'rendementPercentage' => $nusakita1LRendementPercentage,
+            ],
+            'nusakita2L' => [
+                'proportion' => $cartonNusakita2LProportion,
+                'proportionPercentage' => $cartonNusakita2LPercent,
+                'totalQty' => $nusakita2LTotalQty,
+                'rendementPercentage' => $nusakita2LRendementPercentage,
+            ],
+            'additionalSalvaco' => $additionalSalvaco,
+            'additionalNusakita' => $additionalNusakita,
+            'dataDirect' => $directCost,
+            'dataInDirect' => $inDirectCost,
+            'dataPackaging' => $packagingCost,
+        ];
+    }
+
+    public function nextCostingHppFraksinasiIv60($costingHppFraksinasiIv60, $rpPerKgRbdpoFraksinasiIv60, $proCost)
+    {
+        $bahanBakuValueFraksinasiIv60 = $rpPerKgRbdpoFraksinasiIv60 * $costingHppFraksinasiIv60['rbdpoConsume'];
+
+        $bahanBakuFraksinasiIv60 = [
+            'name' => 'Bahan Baku',
+            'proportion' => 100,
+            'value' => $rpPerKgRbdpoFraksinasiIv60,
+            'totalValue' => $bahanBakuValueFraksinasiIv60,
+            'rpPerKg' => $rpPerKgRbdpoFraksinasiIv60
+        ];
+
+        $costingHppFraksinasiIv60['dataDirect']['cost'][0]['item'][] = $bahanBakuFraksinasiIv60;
+        $totalCostFraksinasiIv60 = $bahanBakuValueFraksinasiIv60;
+
+        foreach ($costingHppFraksinasiIv60['dataDirect']['cost'][0]['item'] as $item) {
+            $totalCostFraksinasiIv60 += $item['totalValue'];
+        }
+
+        foreach ($costingHppFraksinasiIv60['dataInDirect']['cost'][0]['item'] as $item) {
+            $totalCostFraksinasiIv60 += $item['totalValue'];
+        }
+
+        $totalRpPerKgFraksinasiIv60 = $costingHppFraksinasiIv60['rbdpoConsume']> 0 ?$totalCostFraksinasiIv60 / $costingHppFraksinasiIv60['rbdpoConsume'] : 0;
+        $costingHppFraksinasiIv60['totalCostFraksinasiIv60'] = $totalCostFraksinasiIv60;
+        $costingHppFraksinasiIv60['totalRpPerKgFraksinasiIv60'] = $totalRpPerKgFraksinasiIv60;
+
+        $totalCostFraksinasiIv60PlusPackaging = 0;
+        foreach ($costingHppFraksinasiIv60['dataPackaging']['cost'][0]['item'] as $item) {
+            $totalCostFraksinasiIv60PlusPackaging += $item['totalValue'];
+        }
+
+        $totalRpPerKgFraksinasiIv60PlusPackaging = $costingHppFraksinasiIv60['rbdpoConsume']> 0 ?$totalCostFraksinasiIv60PlusPackaging / $costingHppFraksinasiIv60['rbdpoConsume'] : 0;
+        $costingHppFraksinasiIv60['totalCostFraksinasiIv60PlusPackaging'] = $totalCostFraksinasiIv60PlusPackaging;
+        $costingHppFraksinasiIv60['totalRpPerKgFraksinasiIv60PlusPackaging'] = $totalRpPerKgFraksinasiIv60PlusPackaging;
+
+        $proporsiBiayaPercentage = [];
+        foreach ($proCost['data']['produksiFraksinasiIV60Data']['data'] as $data) {
+            if ($data['nama'] === 'Proporsi biaya (%)') {
+                foreach ($data['item'] as $item) {
+                    $proporsiBiayaPercentage[$item['name']] = $item['value'];
+                }
+            }
+        }
+
+        $dataPackaging = $costingHppFraksinasiIv60['dataPackaging']['cost'][0]['item'];
+
+        $gajiTunjangan = null;
+        $bahanKimia = null;
+        $angkutLangsir = null;
+        $bahanPengepak = null;
+        $asuransiGudangFilling = null;
+        $depresiasi = null;
+        $salvaco1L = null;
+        $salvaco2L = null;
+        $nusakita1L = null;
+        $nusakita2L = null;
+
+        foreach ($dataPackaging as $item) {
+            if ($item['name'] === 'Gaji & Tunjangan') {
+                $gajiTunjangan = $item;
+            }else if($item['name'] === 'Bahan Kimia'){
+                $bahanKimia = $item;
+            }else if($item['name'] === 'Pengangkutan / Langsir'){
+                $angkutLangsir = $item;
+            }else if($item['name'] === 'Bahan Pengepakan Lainnya'){
+                $bahanPengepak = $item;
+            }else if($item['name'] === 'Biaya Asuransi Gudang & Filling'){
+                $asuransiGudangFilling = $item;
+            }else if($item['name'] === 'Depresiasi'){
+                $depresiasi = $item;
+            }else if($item['name'] === 'Salvaco - 1 Ltr'){
+                $salvaco1L = $item;
+            }else if($item['name'] === 'Salvaco - 2 Ltr'){
+                $salvaco2L = $item;
+            }else if($item['name'] === 'Nusakita - 1 Ltr'){
+                $nusakita1L = $item;
+            }else if($item['name'] === 'Nusakita - 2 Ltr'){
+                $nusakita2L = $item;
+            }
+        }
+
+        $rbdOlein60ProportionFrak60 = $proporsiBiayaPercentage['RBDOlein IV-60'] ?? 0;
+        $rbdStearinProportionFrak60 = $proporsiBiayaPercentage['RBDStearin'] ?? 0;
+        $rbdOlein60TotalValueFrak60 = $totalCostFraksinasiIv60 * ($rbdOlein60ProportionFrak60 / 100);
+        $rbdStearinTotalValueFrak60 = $totalCostFraksinasiIv60 * ($rbdStearinProportionFrak60 / 100);
+        $rbdOlein60RpPerKgFrak60 = ($costingHppFraksinasiIv60['rbdOleinIv60Qty'] != 0) ? ($rbdOlein60TotalValueFrak60 / $costingHppFraksinasiIv60['rbdOleinIv60Qty']) : 0;
+        $rbdStearinRpPerKgFrak60 = ($costingHppFraksinasiIv60['rbdStearinQty'] != 0) ? ($rbdStearinTotalValueFrak60 / $costingHppFraksinasiIv60['rbdStearinQty']) : 0;
+
+        $salvaco1LProportionFrak60 = $costingHppFraksinasiIv60['salvaco1L']['rendementPercentage'] ?? 0;
+        $salvaco2LProportionFrak60 = $costingHppFraksinasiIv60['salvaco2L']['rendementPercentage'] ?? 0;
+        $nusakita1LProportionFrak60 = $costingHppFraksinasiIv60['nusakita1L']['rendementPercentage'] ?? 0;
+        $nusakita2LProportionFrak60 = $costingHppFraksinasiIv60['nusakita2L']['rendementPercentage'] ?? 0;
+
+        $salvaco1LTotalValueFrak60 = ($rbdOlein60RpPerKgFrak60*$costingHppFraksinasiIv60['salvaco1L']['totalQty'])+
+                                        (($gajiTunjangan['totalValue']+$bahanKimia['totalValue']+$angkutLangsir['totalValue']+
+                                        $bahanPengepak['totalValue']+$asuransiGudangFilling['totalValue']+$depresiasi['totalValue'])*$salvaco1LProportionFrak60)+$salvaco1L['totalValue'] ?? 0;
+        $salvaco2LTotalValueFrak60 = ($rbdOlein60RpPerKgFrak60*$costingHppFraksinasiIv60['salvaco2L']['totalQty'])+
+                                        (($gajiTunjangan['totalValue']+$bahanKimia['totalValue']+$angkutLangsir['totalValue']+
+                                        $bahanPengepak['totalValue']+$asuransiGudangFilling['totalValue']+$depresiasi['totalValue'])*$salvaco2LProportionFrak60)+$salvaco2L['totalValue'] ?? 0;
+        $nusakita1LTotalValueFrak60 = ($rbdOlein60RpPerKgFrak60*$costingHppFraksinasiIv60['nusakita1L']['totalQty'])+
+                                        (($gajiTunjangan['totalValue']+$bahanKimia['totalValue']+$angkutLangsir['totalValue']+
+                                        $bahanPengepak['totalValue']+$asuransiGudangFilling['totalValue']+$depresiasi['totalValue'])*$nusakita1LProportionFrak60)+$nusakita1L['totalValue'] ?? 0;
+        $nusakita2LTotalValueFrak60 = ($rbdOlein60RpPerKgFrak60*$costingHppFraksinasiIv60['nusakita2L']['totalQty'])+
+                                        (($gajiTunjangan['totalValue']+$bahanKimia['totalValue']+$angkutLangsir['totalValue']+
+                                        $bahanPengepak['totalValue']+$asuransiGudangFilling['totalValue']+$depresiasi['totalValue'])*$nusakita2LProportionFrak60)+$nusakita2L['totalValue'] ?? 0;
+
+        $salvaco1LRpPerKgFrak60 = $costingHppFraksinasiIv60['salvaco1L']['totalQty'] != 0 ? ($salvaco1LTotalValueFrak60 / $costingHppFraksinasiIv60['salvaco1L']['totalQty']) * 100 : 0;
+        $salvaco2LRpPerKgFrak60 = $costingHppFraksinasiIv60['salvaco2L']['totalQty'] != 0 ? ($salvaco2LTotalValueFrak60 / $costingHppFraksinasiIv60['salvaco2L']['totalQty']) * 100 : 0;
+        $nusakita1LRpPerKgFrak60 = $costingHppFraksinasiIv60['nusakita1L']['totalQty'] != 0 ? ($nusakita1LTotalValueFrak60 / $costingHppFraksinasiIv60['nusakita1L']['totalQty']) * 100 : 0;
+        $nusakita2LRpPerKgFrak60 = $costingHppFraksinasiIv60['nusakita2L']['totalQty'] != 0 ? ($nusakita2LTotalValueFrak60 / $costingHppFraksinasiIv60['nusakita2L']['totalQty']) * 100 : 0;
+
+        $selisihFrak60 = $costingHppFraksinasiIv60['totalCostFraksinasiIv60'] - $rbdOlein60TotalValueFrak60 - $rbdStearinTotalValueFrak60;
+        $palingBawahFrak60 = ($rbdOlein60RpPerKgFrak60 * ($costingHppFraksinasiIv60['salvaco1L']['totalQty'] + $costingHppFraksinasiIv60['salvaco2L']['totalQty'] +
+                            $costingHppFraksinasiIv60['nusakita1L']['totalQty'] + $costingHppFraksinasiIv60['nusakita2L']['totalQty'])) +
+                            ($gajiTunjangan['totalValue'] + $salvaco1L['totalValue'] + $salvaco2L['totalValue'] + $nusakita1L['totalValue'] + $nusakita2L['totalValue'] +
+                            $bahanKimia['totalValue'] + $angkutLangsir['totalValue'] + $bahanPengepak['totalValue'] + $asuransiGudangFilling['totalValue']+$depresiasi['totalValue']) -
+                            ($salvaco1LTotalValueFrak60 + $salvaco2LTotalValueFrak60 + $nusakita1LTotalValueFrak60 + $nusakita2LTotalValueFrak60);
+
+
+        $allocationCostFraksinasiIv60 = [
+            [
+                'nama' => 'RBD Olein IV-60',
+                'proportion' => $rbdOlein60ProportionFrak60,
+                'totalValue' => $rbdOlein60TotalValueFrak60,
+                'rpPerKg' => $rbdOlein60RpPerKgFrak60,
+            ],
+            [
+                'nama' => 'RBD Stearin',
+                'proportion' => $rbdStearinProportionFrak60,
+                'totalValue' => $rbdStearinTotalValueFrak60,
+                'rpPerKg' => $rbdStearinRpPerKgFrak60,
+            ],
+            [
+                'nama' => 'Salvaco - 1 Ltr',
+                'proportion' => $salvaco1LProportionFrak60,
+                'totalValue' => $salvaco1LTotalValueFrak60,
+                'rpPerKg' => $salvaco1LRpPerKgFrak60,
+            ],
+            [
+                'nama' => 'Salvaco - 2 Ltr',
+                'proportion' => $salvaco2LProportionFrak60,
+                'totalValue' => $salvaco2LTotalValueFrak60,
+                'rpPerKg' => $salvaco2LRpPerKgFrak60,
+            ],
+            [
+                'nama' => 'Nusakita - 1 Ltr',
+                'proportion' => $nusakita1LProportionFrak60,
+                'totalValue' => $nusakita1LTotalValueFrak60,
+                'rpPerKg' => $nusakita1LRpPerKgFrak60,
+            ],
+            [
+                'nama' => 'Nusakita - 2 Ltr',
+                'proportion' => $nusakita2LProportionFrak60,
+                'totalValue' => $nusakita2LTotalValueFrak60,
+                'rpPerKg' => $nusakita2LRpPerKgFrak60,
+            ],
+            [
+                'nama' => 'Selisih',
+                'totalValue' => $selisihFrak60,
+            ],
+            [
+                'nama' => 'palingBawah',
+                'totalValue' => $palingBawahFrak60,
+            ]
+        ];
+
+        $costingHppFraksinasiIv60['allocationCostFraksinasiIv60'] = $allocationCostFraksinasiIv60;
+
+        return $costingHppFraksinasiIv60;
+    }
+
+    public function costingHppFraksinasiIv58($laporanProduksi, $alokasiCost, $proporPercentFrak58, $dataDirectFrak58, $dataInDirectFrak58)
+    {
+        $rbdpoConsumeQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-58)', 'RBDPO (Olah)');
+        $rbdOleinIv58Qty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-58)', 'RBD Olein IV 58 (Produksi)');
+        $rbdStearinQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-58)', 'RBD Stearin (Produksi)');
+        $oleinConsumeQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (INL)', 'Olein IV 58 Consume');
+
+        $rbdOleinIv58RendementPercentage = $rbdpoConsumeQty != 0 ? ($rbdOleinIv58Qty / $rbdpoConsumeQty) * 100 : 0;
+        $rbdStearinRendementPercentage = $rbdpoConsumeQty != 0 ? ($rbdStearinQty / $rbdpoConsumeQty) * 100 : 0;
+
+        $produksiAll = $laporanProduksi['produksiAll'];
+
+        $produksiAllFraksinasiPercentage = 0;
+
+        if (isset($produksiAll['production']) && is_array($produksiAll['production'])) {
+            foreach ($produksiAll['production'] as $production) {
+                if (isset($production['items']) && is_array($production['items'])) {
+                    foreach ($production['items'] as $item) {
+                        if ($item['name'] === 'Fraksinasi') {
+                            $produksiAllFraksinasiPercentage = $item['percentage'];
+                        }
+                    }
+                }
+            }
+        }
+
+        $penyusutanAllocation = $laporanProduksi['biayaPenyusutanAllocation'];
+        $penyusutanAllocationFraksinasiPercentage = 0;
+
+        foreach ($penyusutanAllocation['columns'] as $column) {
+            if ($column['name'] === '%') {
+                foreach ($column['alokasi'] as $alokasi) {
+                    if ($alokasi['name'] === 'Fraksinasi') {
+                        $penyusutanAllocationFraksinasiPercentage = $alokasi['value'];
+                    }
+                }
+            }
+        }
+
+        $bahanBakarProportionFrak58 = $alokasiCost['Fraksinasi']['gasPercentage'] ?? 0;
+        $othersProportionFrak58 = $produksiAllFraksinasiPercentage;
+        $analisaLabProportionFrak58 = $othersProportionFrak58;
+        $listrikProportionFrak58 = $alokasiCost['Fraksinasi']['listrikPercentage'] ?? 0;
+        $airProportionFrak58 = $alokasiCost['Fraksinasi']['airPercentage'] ?? 0;
+        $gajiPimpinanProportionFrak58 = $othersProportionFrak58 ?? 0;
+        $gajiPelaksanaProportionFrak58 = $othersProportionFrak58 ?? 0;
+        $asuransiPabrikProportionFrak58 = $othersProportionFrak58 ?? 0;
+        $bengkelProportionFrak58 = $othersProportionFrak58 ?? 0;
+        $depresiasiProportionFrak58 = $penyusutanAllocationFraksinasiPercentage ?? 0;
+
+        $proportionDirectFrak58 = [
+            [
+                'nama' => 'Bahan Bakar',
+                'proportion' => $bahanBakarProportionFrak58,
+                'proportion2' => $proporPercentFrak58,
+            ],
+            [
+                'nama' => 'Others',
+                'proportion' => $othersProportionFrak58,
+                'proportion2' => $proporPercentFrak58,
+            ],
+            [
+                'nama' => 'Biaya Analisa & Laboratorium',
+                'proportion' => $analisaLabProportionFrak58,
+                'proportion2' => $proporPercentFrak58,
+            ],
+            [
+                'nama' => 'Biaya Listrik',
+                'proportion' => $listrikProportionFrak58,
+                'proportion2' => $proporPercentFrak58,
+            ],
+            [
+                'nama' => 'Biaya Air',
+                'proportion' => $airProportionFrak58,
+                'proportion2' => $proporPercentFrak58,
+            ],
+        ];
+
+        $proportionInDirectFrak58 = [
+            [
+                'nama' => 'Gaji, Tunjangan & Biaya Sosial Karyawan Pimpinan',
+                'proportion' => $gajiPimpinanProportionFrak58,
+                'proportion2' => $proporPercentFrak58,
+            ],
+            [
+                'nama' => 'Gaji, Tunjangan & Biaya Sosial Karyawan Pelaksana',
+                'proportion' => $gajiPelaksanaProportionFrak58,
+                'proportion2' => $proporPercentFrak58,
+            ],
+            [
+                'nama' => 'Biaya Assuransi Pabrik',
+                'proportion' => $asuransiPabrikProportionFrak58,
+                'proportion2' => $proporPercentFrak58,
+            ],
+            [
+                'nama' => 'Biaya Bengkel & Pemeliharaan',
+                'proportion' => $bengkelProportionFrak58,
+                'proportion2' => $proporPercentFrak58,
+            ],
+            [
+                'nama' => 'Depresiasi',
+                'proportion' => $depresiasiProportionFrak58,
+                'proportion2' => $proporPercentFrak58,
+            ],
+        ];
+
+        $directCost = $this->generateCostOutput('Fraksinasi IV-58', $dataDirectFrak58, $rbdpoConsumeQty, $proportionDirectFrak58);
+        $inDirectCost = $this->generateCostOutput('Fraksinasi IV-58', $dataInDirectFrak58, $rbdpoConsumeQty, $proportionInDirectFrak58);
+
+        return [
+            'rbdpoConsume' => $rbdpoConsumeQty,
+            'rbdOleinIv58Qty' => $rbdOleinIv58Qty,
+            'rbdStearinQty' => $rbdStearinQty,
+            'rbdOleinIv58RendementPercentage' => $rbdOleinIv58RendementPercentage,
+            'rbdStearinRendementPercentage' => $rbdStearinRendementPercentage,
+
+            'dataDirect' => $directCost,
+            'dataInDirect' => $inDirectCost,
+        ];
+    }
+
+    public function nextCostingHppFraksinasiIv58($costingHppFraksinasiIv58, $rpPerKgRbdpoFraksinasiIv58, $proCost)
+    {
+        $bahanBakuValueFraksinasiIv58 = $rpPerKgRbdpoFraksinasiIv58 * $costingHppFraksinasiIv58['rbdpoConsume'];
+
+        $bahanBakuFraksinasiIv58 = [
+            'name' => 'Bahan Baku',
+            'proportion' => 100,
+            'value' => $rpPerKgRbdpoFraksinasiIv58,
+            'totalValue' => $bahanBakuValueFraksinasiIv58,
+            'rpPerKg' => $rpPerKgRbdpoFraksinasiIv58
+        ];
+
+        $costingHppFraksinasiIv58['dataDirect']['cost'][0]['item'][] = $bahanBakuFraksinasiIv58;
+        $totalCostFraksinasiIv58 = $bahanBakuValueFraksinasiIv58;
+
+        foreach ($costingHppFraksinasiIv58['dataDirect']['cost'][0]['item'] as $item) {
+            $totalCostFraksinasiIv58 += $item['totalValue'];
+        }
+
+        foreach ($costingHppFraksinasiIv58['dataInDirect']['cost'][0]['item'] as $item) {
+            $totalCostFraksinasiIv58 += $item['totalValue'];
+        }
+
+        $totalRpPerKgFraksinasiIv58 = $costingHppFraksinasiIv58['rbdpoConsume']> 0 ?$totalCostFraksinasiIv58 / $costingHppFraksinasiIv58['rbdpoConsume'] : 0;
+        $costingHppFraksinasiIv58['totalCostFraksinasiIv58'] = $totalCostFraksinasiIv58;
+        $costingHppFraksinasiIv58['totalRpPerKgFraksinasiIv58'] = $totalRpPerKgFraksinasiIv58;
+
+        $proporsiBiayaPercentage = [];
+        foreach ($proCost['data']['produksiFraksinasiIV58Data']['data'] as $data) {
+            if ($data['nama'] === 'Proporsi biaya (%)') {
+                foreach ($data['item'] as $item) {
+                    $proporsiBiayaPercentage[$item['name']] = $item['value'];
+                }
+            }
+        }
+
+        $rbdOlein58ProportionFrak58 = $proporsiBiayaPercentage['RBDOlein IV-58'] ?? 0;
+        $rbdStearinProportionFrak58 = $proporsiBiayaPercentage['RBDStearin'] ?? 0;
+        $rbdOlein58TotalValueFrak58 = $totalCostFraksinasiIv58 * ($rbdOlein58ProportionFrak58 / 100);
+        $rbdStearinTotalValueFrak58 = $totalCostFraksinasiIv58 * ($rbdStearinProportionFrak58 / 100);
+        $rbdOlein58RpPerKgFrak58 = ($costingHppFraksinasiIv58['rbdOleinIv58Qty'] != 0) ? ($rbdOlein58TotalValueFrak58 / $costingHppFraksinasiIv58['rbdOleinIv58Qty']) : 0;
+        $rbdStearinRpPerKgFrak58 = ($costingHppFraksinasiIv58['rbdStearinQty'] != 0) ? ($rbdStearinTotalValueFrak58 / $costingHppFraksinasiIv58['rbdStearinQty']) : 0;
+
+        $selisihFrak58 = $costingHppFraksinasiIv58['totalCostFraksinasiIv58'] - $rbdOlein58TotalValueFrak58 - $rbdStearinTotalValueFrak58;
+
+        $allocationCostFraksinasiIv58 = [
+            [
+                'nama' => 'RBD Olein IV-58',
+                'proportion' => $rbdOlein58ProportionFrak58,
+                'totalValue' => $rbdOlein58TotalValueFrak58,
+                'rpPerKg' => $rbdOlein58RpPerKgFrak58,
+            ],
+            [
+                'nama' => 'RBD Stearin',
+                'proportion' => $rbdStearinProportionFrak58,
+                'totalValue' => $rbdStearinTotalValueFrak58,
+                'rpPerKg' => $rbdStearinRpPerKgFrak58,
+            ],
+
+            [
+                'nama' => 'Selisih',
+                'totalValue' => $selisihFrak58,
+            ]
+        ];
+
+        $costingHppFraksinasiIv58['allocationCostFraksinasiIv58'] = $allocationCostFraksinasiIv58;
+
+        return $costingHppFraksinasiIv58;
+    }
+
+    public function costingHppFraksinasiIv57($laporanProduksi, $alokasiCost, $proporPercentFrak57, $proporPercentFrak57PlusPackaging, $konversiMlToKg, $dataDirectFrak57, $dataInDirectFrak57, $dataPackagingCostFrak57)
+    {
+        $rbdpoConsumeQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-57)', 'RBDPO (Olah)');
+        $rbdOleinIv57Qty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-57)', 'RBD Olein IV 57 (Produksi)');
+        $rbdStearinQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-57)', 'RBD Stearin (Produksi)');
+        $oleinConsumeQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (INL)', 'Olein IV 57 Consume');
+
+        $rbdOleinIv57RendementPercentage = $rbdpoConsumeQty != 0 ? ($rbdOleinIv57Qty / $rbdpoConsumeQty) * 100 : 0;
+        $rbdStearinRendementPercentage = $rbdpoConsumeQty != 0 ? ($rbdStearinQty / $rbdpoConsumeQty) * 100 : 0;
+        $cartonINL250mLProportion = $konversiMlToKg;
+        $cartonINL450mLProportion = $konversiMlToKg;
+        $cartonINL900mLProportion = $konversiMlToKg;
+        $cartonINL1800mLProportion = $konversiMlToKg;
+
+        $cartonINL250mLQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (INL)', 'Carton INL 250 mL');
+        $cartonINL450mLQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (INL)', 'Carton INL 450 mL');
+        $cartonINL900mLQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (INL)', 'Carton INL 900 mL');
+        $cartonINL1800mLQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (INL)', 'Carton INL 1800 mL');
+
+        $cartonINLQty = $cartonINL250mLQty + $cartonINL450mLQty + $cartonINL900mLQty + $cartonINL1800mLQty;
+
+        $cartonINL250mLPercent = $cartonINLQty != 0 ? ($cartonINL250mLQty / $cartonINLQty) * 100 : 0;
+        $cartonINL450mLPercent = $cartonINLQty != 0 ? ($cartonINL450mLQty / $cartonINLQty) * 100 : 0;
+        $cartonINL900mLPercent = $cartonINLQty != 0 ? ($cartonINL900mLQty / $cartonINLQty) * 100 : 0;
+        $cartonINL1800mLPercent = $cartonINLQty != 0 ? ($cartonINL1800mLQty / $cartonINLQty) * 100 : 0;
+
+        $cartonINLTotalQty = $cartonINLQty*$konversiMlToKg;
+        $additionalINL = abs($oleinConsumeQty - $cartonINLTotalQty);    // abs = alwasy positive
+
+        $inl250mLTotalQty = ($cartonINL250mLQty*$cartonINL250mLProportion)+($additionalINL*($cartonINL250mLPercent/100));
+        $inl450mLTotalQty = ($cartonINL450mLQty*$cartonINL450mLProportion)+($additionalINL*($cartonINL450mLPercent/100));
+        $inl900mLTotalQty = ($cartonINL900mLQty*$cartonINL900mLProportion)+($additionalINL*($cartonINL900mLPercent/100));
+        $inl1800mLTotalQty = ($cartonINL1800mLQty*$cartonINL1800mLProportion)+($additionalINL*($cartonINL1800mLPercent/100));
+
+        $totalINLQty = $inl250mLTotalQty + $inl450mLTotalQty + $inl900mLTotalQty + $inl1800mLTotalQty;
+
+        $inl250mLRendementPercentage = $totalINLQty != 0 ? ($inl250mLTotalQty / $totalINLQty) * 100 : 0;
+        $inl450mLRendementPercentage = $totalINLQty != 0 ? ($inl450mLTotalQty / $totalINLQty) * 100 : 0;
+        $inl900mLRendementPercentage = $totalINLQty != 0 ? ($inl900mLTotalQty / $totalINLQty) * 100 : 0;
+        $inl1800mLRendementPercentage = $totalINLQty != 0 ? ($inl1800mLTotalQty / $totalINLQty) * 100 : 0;
+
+        $produksiAll = $laporanProduksi['produksiAll'];
+        $produksiAllFraksinasiPercentage = 0;
+
+        if (isset($produksiAll['production']) && is_array($produksiAll['production'])) {
+            foreach ($produksiAll['production'] as $production) {
+                if (isset($production['items']) && is_array($production['items'])) {
+                    foreach ($production['items'] as $item) {
+                        if ($item['name'] === 'Fraksinasi') {
+                            $produksiAllFraksinasiPercentage = $item['percentage'];
+                        }
+                    }
+                }
+            }
+        }
+
+        $penyusutanAllocation = $laporanProduksi['biayaPenyusutanAllocation'];
+        $penyusutanAllocationFraksinasiPercentage = 0;
+
+        foreach ($penyusutanAllocation['columns'] as $column) {
+            if ($column['name'] === '%') {
+                foreach ($column['alokasi'] as $alokasi) {
+                    if ($alokasi['name'] === 'Fraksinasi') {
+                        $penyusutanAllocationFraksinasiPercentage = $alokasi['value'];
+                    }
+                }
+            }
+        }
+
+        $bahanBakarProportionFrak57 = $alokasiCost['Fraksinasi']['gasPercentage'] ?? 0;
+        $othersProportionFrak57 = $produksiAllFraksinasiPercentage;
+        $analisaLabProportionFrak57 = $othersProportionFrak57;
+        $listrikProportionFrak57 = $alokasiCost['Fraksinasi']['listrikPercentage'] ?? 0;
+        $airProportionFrak57 = $alokasiCost['Fraksinasi']['airPercentage'] ?? 0;
+        $gajiPimpinanProportionFrak57 = $othersProportionFrak57 ?? 0;
+        $gajiPelaksanaProportionFrak57 = $othersProportionFrak57 ?? 0;
+        $asuransiPabrikProportionFrak57 = $othersProportionFrak57 ?? 0;
+        $bengkelProportionFrak57 = $othersProportionFrak57 ?? 0;
+        $depresiasiProportionFrak57 = $penyusutanAllocationFraksinasiPercentage ?? 0;
+
+        $proportionDirectFrak57 = [
+            [
+                'nama' => 'Bahan Bakar',
+                'proportion' => $bahanBakarProportionFrak57,
+                'proportion2' => $proporPercentFrak57,
+            ],
+            [
+                'nama' => 'Others',
+                'proportion' => $othersProportionFrak57,
+                'proportion2' => $proporPercentFrak57,
+            ],
+            [
+                'nama' => 'Biaya Analisa & Laboratorium',
+                'proportion' => $analisaLabProportionFrak57,
+                'proportion2' => $proporPercentFrak57,
+            ],
+            [
+                'nama' => 'Biaya Listrik',
+                'proportion' => $listrikProportionFrak57,
+                'proportion2' => $proporPercentFrak57,
+            ],
+            [
+                'nama' => 'Biaya Air',
+                'proportion' => $airProportionFrak57,
+                'proportion2' => $proporPercentFrak57,
+            ],
+        ];
+
+        $proportionInDirectFrak57 = [
+            [
+                'nama' => 'Gaji, Tunjangan & Biaya Sosial Karyawan Pimpinan',
+                'proportion' => $gajiPimpinanProportionFrak57,
+                'proportion2' => $proporPercentFrak57,
+            ],
+            [
+                'nama' => 'Gaji, Tunjangan & Biaya Sosial Karyawan Pelaksana',
+                'proportion' => $gajiPelaksanaProportionFrak57,
+                'proportion2' => $proporPercentFrak57,
+            ],
+            [
+                'nama' => 'Biaya Assuransi Pabrik',
+                'proportion' => $asuransiPabrikProportionFrak57,
+                'proportion2' => $proporPercentFrak57,
+            ],
+            [
+                'nama' => 'Biaya Bengkel & Pemeliharaan',
+                'proportion' => $bengkelProportionFrak57,
+                'proportion2' => $proporPercentFrak57,
+            ],
+            [
+                'nama' => 'Depresiasi',
+                'proportion' => $depresiasiProportionFrak57,
+                'proportion2' => $proporPercentFrak57,
+            ],
+        ];
+
+        $proportionPackagingFrak57 = [
+            [
+                'nama' => 'Gaji & Tunjangan',
+                'proportion' => $proporPercentFrak57PlusPackaging,
+            ],
+            [
+                'nama' => 'Bahan Kimia',
+                'proportion' => $proporPercentFrak57PlusPackaging,
+            ],
+            [
+                'nama' => 'Pengangkutan / Langsir',
+                'proportion' => $proporPercentFrak57PlusPackaging,
+            ],
+            [
+                'nama' => 'Bahan Pengepakan Lainnya',
+                'proportion' => $proporPercentFrak57PlusPackaging,
+            ],
+            [
+                'nama' => 'Biaya Asuransi Gudang & Filling',
+                'proportion' => $proporPercentFrak57PlusPackaging,
+            ],
+            [
+                'nama' => 'Depresiasi',
+                'proportion' => $proporPercentFrak57PlusPackaging,
+            ],
+        ];
+
+        $directCost = $this->generateCostOutput('Fraksinasi IV-57', $dataDirectFrak57, $rbdpoConsumeQty, $proportionDirectFrak57);
+        $inDirectCost = $this->generateCostOutput('Fraksinasi IV-57', $dataInDirectFrak57, $rbdpoConsumeQty, $proportionInDirectFrak57);
+        $packagingCost = $this->generateCostOutput('Fraksinasi IV-57', $dataPackagingCostFrak57, $rbdpoConsumeQty, $proportionPackagingFrak57);
+
+        return [
+            'rbdpoConsume' => $rbdpoConsumeQty,
+            'rbdOleinIv57Qty' => $rbdOleinIv57Qty,
+            'rbdStearinQty' => $rbdStearinQty,
+            'rbdOleinIv57RendementPercentage' => $rbdOleinIv57RendementPercentage,
+            'rbdStearinRendementPercentage' => $rbdStearinRendementPercentage,
+            'inl250mL' => [
+                'proportion' => $cartonINL250mLProportion,
+                'proportionPercentage' => $cartonINL250mLPercent,
+                'totalQty' => $inl250mLTotalQty,
+                'rendementPercentage' => $inl250mLRendementPercentage,
+            ],
+            'inl450mL' => [
+                'proportion' => $cartonINL450mLProportion,
+                'proportionPercentage' => $cartonINL450mLPercent,
+                'totalQty' => $inl450mLTotalQty,
+                'rendementPercentage' => $inl450mLRendementPercentage,
+            ],
+            'inl900mL' => [
+                'proportion' => $cartonINL900mLProportion,
+                'proportionPercentage' => $cartonINL900mLPercent,
+                'totalQty' => $inl900mLTotalQty,
+                'rendementPercentage' => $inl900mLRendementPercentage,
+            ],
+            'inl1800mL' => [
+                'proportion' => $cartonINL1800mLProportion,
+                'proportionPercentage' => $cartonINL1800mLPercent,
+                'totalQty' => $inl1800mLTotalQty,
+                'rendementPercentage' => $inl1800mLRendementPercentage,
+            ],
+            'additional' => $additionalINL,
+            'dataDirect' => $directCost,
+            'dataInDirect' => $inDirectCost,
+            'dataPackaging' => $packagingCost,
+        ];
+    }
+
+    public function nextCostingHppFraksinasiIv57($costingHppFraksinasiIv57, $rpPerKgRbdpoFraksinasiIv57, $proCost)
+    {
+        $bahanBakuValueFraksinasiIv57 = $rpPerKgRbdpoFraksinasiIv57 * $costingHppFraksinasiIv57['rbdpoConsume'];
+
+        $bahanBakuFraksinasiIv57 = [
+            'name' => 'Bahan Baku',
+            'proportion' => 100,
+            'value' => $rpPerKgRbdpoFraksinasiIv57,
+            'totalValue' => $bahanBakuValueFraksinasiIv57,
+            'rpPerKg' => $rpPerKgRbdpoFraksinasiIv57
+        ];
+
+        $costingHppFraksinasiIv57['dataDirect']['cost'][0]['item'][] = $bahanBakuFraksinasiIv57;
+        $totalCostFraksinasiIv57 = $bahanBakuValueFraksinasiIv57;
+
+        foreach ($costingHppFraksinasiIv57['dataDirect']['cost'][0]['item'] as $item) {
+            $totalCostFraksinasiIv57 += $item['totalValue'];
+        }
+
+        foreach ($costingHppFraksinasiIv57['dataInDirect']['cost'][0]['item'] as $item) {
+            $totalCostFraksinasiIv57 += $item['totalValue'];
+        }
+
+        $totalRpPerKgFraksinasiIv57 = $costingHppFraksinasiIv57['rbdpoConsume']> 0 ?$totalCostFraksinasiIv57 / $costingHppFraksinasiIv57['rbdpoConsume'] : 0;
+        $costingHppFraksinasiIv57['totalCostFraksinasiIv57'] = $totalCostFraksinasiIv57;
+        $costingHppFraksinasiIv57['totalRpPerKgFraksinasiIv57'] = $totalRpPerKgFraksinasiIv57;
+
+        $totalCostFraksinasiIv57PlusPackaging = 0;
+        foreach ($costingHppFraksinasiIv57['dataPackaging']['cost'][0]['item'] as $item) {
+            $totalCostFraksinasiIv57PlusPackaging += $item['totalValue'];
+        }
+
+        $totalRpPerKgFraksinasiIv57PlusPackaging = $costingHppFraksinasiIv57['rbdpoConsume']> 0 ?$totalCostFraksinasiIv57PlusPackaging / $costingHppFraksinasiIv57['rbdpoConsume'] : 0;
+        $costingHppFraksinasiIv57['totalCostFraksinasiIv57PlusPackaging'] = $totalCostFraksinasiIv57PlusPackaging;
+        $costingHppFraksinasiIv57['totalRpPerKgFraksinasiIv57PlusPackaging'] = $totalRpPerKgFraksinasiIv57PlusPackaging;
+        $proporsiBiayaPercentage = [];
+        foreach ($proCost['data']['produksiFraksinasiIV57Data']['data'] as $data) {
+            if ($data['nama'] === 'Proporsi biaya (%)') {
+                foreach ($data['item'] as $item) {
+                    $proporsiBiayaPercentage[$item['name']] = $item['value'];
+                }
+            }
+        }
+
+        $dataPackaging = $costingHppFraksinasiIv57['dataPackaging']['cost'][0]['item'];
+        $gajiTunjangan = null;
+        $bahanKimia = null;
+        $angkutLangsir = null;
+        $bahanPengepak = null;
+        $asuransiGudangFilling = null;
+        $depresiasi = null;
+        $inl250ml = null;
+        $inl450ml = null;
+        $inl900ml = null;
+        $inl1800ml = null;
+        foreach ($dataPackaging as $item) {
+            if ($item['name'] === 'Gaji & Tunjangan') {
+                $gajiTunjangan = $item;
+            }else if($item['name'] === 'Bahan Kimia'){
+                $bahanKimia = $item;
+            }else if($item['name'] === 'Pengangkutan / Langsir'){
+                $angkutLangsir = $item;
+            }else if($item['name'] === 'Bahan Pengepakan Lainnya'){
+                $bahanPengepak = $item;
+            }else if($item['name'] === 'Biaya Asuransi Gudang & Filling'){
+                $asuransiGudangFilling = $item;
+            }else if($item['name'] === 'Depresiasi'){
+                $depresiasi = $item;
+            }else if($item['name'] === 'INL - 250ml'){
+                $inl250ml = $item;
+            }else if($item['name'] === 'INL - 450ml'){
+                $inl450ml = $item;
+            }else if($item['name'] === 'INL - 900ml'){
+                $inl900ml = $item;
+            }else if($item['name'] === 'INL - 1800ml'){
+                $inl1800ml = $item;
+            }
+        }
+
+        $rbdOlein57ProportionFrak57 = $proporsiBiayaPercentage['RBDOlein IV-57'] ?? 0;
+        $rbdStearinProportionFrak57 = $proporsiBiayaPercentage['RBDStearin'] ?? 0;
+        $rbdOlein57TotalValueFrak57 = $totalCostFraksinasiIv57 * ($rbdOlein57ProportionFrak57 / 100);
+        $rbdStearinTotalValueFrak57 = $totalCostFraksinasiIv57 * ($rbdStearinProportionFrak57 / 100);
+        $rbdOlein57RpPerKgFrak57 = ($costingHppFraksinasiIv57['rbdOleinIv57Qty'] != 0) ? ($rbdOlein57TotalValueFrak57 / $costingHppFraksinasiIv57['rbdOleinIv57Qty']) : 0;
+        $rbdStearinRpPerKgFrak57 = ($costingHppFraksinasiIv57['rbdStearinQty'] != 0) ? ($rbdStearinTotalValueFrak57 / $costingHppFraksinasiIv57['rbdStearinQty']) : 0;
+
+        $inl250mlProportionFrak57 = $costingHppFraksinasiIv57['inl250mL']['rendementPercentage'] ?? 0;
+        $inl450mlProportionFrak57 = $costingHppFraksinasiIv57['inl450mL']['rendementPercentage'] ?? 0;
+        $inl900mlProportionFrak57 = $costingHppFraksinasiIv57['inl900mL']['rendementPercentage'] ?? 0;
+        $inl1800mlProportionFrak57 = $costingHppFraksinasiIv57['inl1800mL']['rendementPercentage'] ?? 0;
+
+        $inl250mlTotalValueFrak57 = ($rbdOlein57RpPerKgFrak57*$costingHppFraksinasiIv57['inl250mL']['totalQty'])+
+                                        (($gajiTunjangan['totalValue']+$bahanKimia['totalValue']+$angkutLangsir['totalValue']+
+                                        $bahanPengepak['totalValue']+$asuransiGudangFilling['totalValue']+$depresiasi['totalValue'])*$inl250mlProportionFrak57)+$inl250ml['totalValue'] ?? 0;
+
+        $inl450mlTotalValueFrak57 = ($rbdOlein57RpPerKgFrak57*$costingHppFraksinasiIv57['inl450mL']['totalQty'])+
+                                        (($gajiTunjangan['totalValue']+$bahanKimia['totalValue']+$angkutLangsir['totalValue']+
+                                        $bahanPengepak['totalValue']+$asuransiGudangFilling['totalValue']+$depresiasi['totalValue'])*$inl450mlProportionFrak57)+$inl450ml['totalValue'] ?? 0;
+
+        $inl900mlTotalValueFrak57 = ($rbdOlein57RpPerKgFrak57*$costingHppFraksinasiIv57['inl900mL']['totalQty'])+
+                                        (($gajiTunjangan['totalValue']+$bahanKimia['totalValue']+$angkutLangsir['totalValue']+
+                                        $bahanPengepak['totalValue']+$asuransiGudangFilling['totalValue']+$depresiasi['totalValue'])*$inl900mlProportionFrak57)+$inl900ml['totalValue'] ?? 0;
+
+        $inl1800mlTotalValueFrak57 = ($rbdOlein57RpPerKgFrak57*$costingHppFraksinasiIv57['inl1800mL']['totalQty'])+
+                                        (($gajiTunjangan['totalValue']+$bahanKimia['totalValue']+$angkutLangsir['totalValue']+
+                                        $bahanPengepak['totalValue']+$asuransiGudangFilling['totalValue']+$depresiasi['totalValue'])*$inl1800mlProportionFrak57)+$inl1800ml['totalValue'] ?? 0;
+
+        $inl250mlRpPerKgFrak57 = $costingHppFraksinasiIv57['inl250mL']['totalQty'] != 0 ? ($inl250mlTotalValueFrak57 / $costingHppFraksinasiIv57['inl250mL']['totalQty']) * 100 : 0;
+        $inl450mlRpPerKgFrak57 = $costingHppFraksinasiIv57['inl450mL']['totalQty'] != 0 ? ($inl450mlTotalValueFrak57 / $costingHppFraksinasiIv57['inl450mL']['totalQty']) * 100 : 0;
+        $inl900mlRpPerKgFrak57 = $costingHppFraksinasiIv57['inl900mL']['totalQty'] != 0 ? ($inl900mlTotalValueFrak57 / $costingHppFraksinasiIv57['inl900mL']['totalQty']) * 100 : 0;
+        $inl1800mlRpPerKgFrak57 = $costingHppFraksinasiIv57['inl1800mL']['totalQty'] != 0 ? ($inl1800mlTotalValueFrak57 / $costingHppFraksinasiIv57['inl1800mL']['totalQty']) * 100 : 0;
+
+        $selisihFrak57 = $costingHppFraksinasiIv57['totalCostFraksinasiIv57'] - $rbdOlein57TotalValueFrak57 - $rbdStearinTotalValueFrak57;
+        $palingBawahFrak57 = ($rbdOlein57RpPerKgFrak57 * ($costingHppFraksinasiIv57['inl250mL']['totalQty'] + $costingHppFraksinasiIv57['inl450mL']['totalQty'] +
+                            $costingHppFraksinasiIv57['inl900mL']['totalQty'] + $costingHppFraksinasiIv57['inl1800mL']['totalQty'])) +
+                            ($gajiTunjangan['totalValue'] + $inl250ml['totalValue'] + $inl450ml['totalValue'] + $inl900ml['totalValue'] + $inl1800ml['totalValue'] +
+                            $bahanKimia['totalValue'] + $angkutLangsir['totalValue'] + $bahanPengepak['totalValue'] + $asuransiGudangFilling['totalValue']+$depresiasi['totalValue']) -
+                            ($inl250mlTotalValueFrak57 + $inl450mlTotalValueFrak57 + $inl900mlTotalValueFrak57 + $inl1800mlTotalValueFrak57);
+
+
+        $allocationCostFraksinasiIv57 = [
+            [
+                'nama' => 'RBD Olein IV-57',
+                'proportion' => $rbdOlein57ProportionFrak57,
+                'totalValue' => $rbdOlein57TotalValueFrak57,
+                'rpPerKg' => $rbdOlein57RpPerKgFrak57,
+            ],
+            [
+                'nama' => 'RBD Stearin',
+                'proportion' => $rbdStearinProportionFrak57,
+                'totalValue' => $rbdStearinTotalValueFrak57,
+                'rpPerKg' => $rbdStearinRpPerKgFrak57,
+            ],
+            [
+                'nama' => 'INL - 250ml',
+                'proportion' => $inl250mlProportionFrak57,
+                'totalValue' => $inl250mlTotalValueFrak57,
+                'rpPerKg' => $inl250mlRpPerKgFrak57,
+            ],
+            [
+                'nama' => 'INL - 450ml',
+                'proportion' => $inl450mlProportionFrak57,
+                'totalValue' => $inl450mlTotalValueFrak57,
+                'rpPerKg' => $inl450mlRpPerKgFrak57,
+            ],
+            [
+                'nama' => 'INL - 900ml',
+                'proportion' => $inl900mlProportionFrak57,
+                'totalValue' => $inl900mlTotalValueFrak57,
+                'rpPerKg' => $inl900mlRpPerKgFrak57,
+            ],
+            [
+                'nama' => 'INL - 1800ml',
+                'proportion' => $inl1800mlProportionFrak57,
+                'totalValue' => $inl1800mlTotalValueFrak57,
+                'rpPerKg' => $inl1800mlRpPerKgFrak57,
+            ],
+            [
+                'nama' => 'Selisih',
+                'totalValue' => $selisihFrak57,
+            ],
+            [
+                'nama' => 'palingBawah',
+                'totalValue' => $palingBawahFrak57,
+            ]
+        ];
+
+        $costingHppFraksinasiIv57['allocationCostFraksinasiIv57'] = $allocationCostFraksinasiIv57;
+
+        return $costingHppFraksinasiIv57;
+    }
+
     public function costingHppFraksinasiIv56($laporanProduksi, $alokasiCost, $proporPercentFrak56, $proporPercentFrak56PlusPackaging, $konversiLiterToKg, $dataDirectFrak56, $dataInDirectFrak56, $dataPackagingCostFrak56)
     {
         $rbdpoConsumeQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Fraksinasi (IV-56)', 'RBDPO (Olah)');
@@ -1917,14 +2986,20 @@ class Controller extends BaseController
 
         $cartonMinyakita1LQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (Minyakita)', 'Carton Minyakita 1 Liter');
         $cartonMinyakita2LQty = $this->getTotalQty($laporanProduksi['recap']['laporanProduksi'], 'Packaging (Minyakita)', 'Carton Minyakita 2 Liter');
+
         $cartonMinyakitaQty = $cartonMinyakita1LQty + $cartonMinyakita2LQty;
+
         $cartonMinyakita1LPercent = $cartonMinyakitaQty != 0 ? ($cartonMinyakita1LQty / $cartonMinyakitaQty) * 100 : 0;
         $cartonMinyakita2LPercent = $cartonMinyakitaQty != 0 ? ($cartonMinyakita2LQty / $cartonMinyakitaQty) * 100 : 0;
+
         $cartonMinyakitaTotalQty = $cartonMinyakitaQty*$konversiLiterToKg;
         $additionalMinyakita = abs($oleinConsumeQty - $cartonMinyakitaTotalQty);    // abs = alwasy positive
+
         $minyakita1LTotalQty = ($cartonMinyakita1LQty*$cartonMinyakita1LProportion)+($additionalMinyakita*($cartonMinyakita1LPercent/100));
         $minyakita2LTotalQty = ($cartonMinyakita2LQty*$cartonMinyakita2LProportion)+($additionalMinyakita*($cartonMinyakita2LPercent/100));
+
         $totalMinyakitaQty = $minyakita1LTotalQty + $minyakita2LTotalQty;
+
         $minyakita1LRendementPercentage = $totalMinyakitaQty != 0 ? ($minyakita1LTotalQty / $totalMinyakitaQty) * 100 : 0;
         $minyakita2LRendementPercentage = $totalMinyakitaQty != 0 ? ($minyakita2LTotalQty / $totalMinyakitaQty) * 100 : 0;
 
@@ -2134,7 +3209,6 @@ class Controller extends BaseController
         $depresiasi = null;
         $minyakita1Ltr = null;
         $minyakita2Ltr = null;
-        // dd($dataPackaging);
         foreach ($dataPackaging as $item) {
             if ($item['name'] === 'Gaji & Tunjangan') {
                 $gajiTunjangan = $item;
@@ -2366,7 +3440,8 @@ class Controller extends BaseController
     {
         $proCost = $this->processProCost($request);
         $laporanProduksi = $this->processPenyusutan($request);
-        $avgPrice = $this->processQtyBebanBlendingDowngradeForCostingHpp($request, $proCost, $laporanProduksi);
+        $bebanBlendingDowngrade = $this->processQtyBebanBlendingDowngradeForCostingHpp($request, $proCost, $laporanProduksi);
+        $costProd = $this->processCostProdPeriod($request);
 
         $alokasiBiaya = $laporanProduksi['recap']['alokasiBiaya']['allocation'];
 
@@ -2406,23 +3481,40 @@ class Controller extends BaseController
         }
 
         $konversiLiterToKg = $this->settingGet('konversi_liter_to_kg')->setting_value;
+        $konversiMlToKg = $this->settingGet('konversi_m_liter_to_kg')->setting_value;
 
         $proporPercentFrak56 = 0;
         $proporPercentFrak56PlusPackaging = 0;
+        $proporPercentFrak57 = 0;
+        $proporPercentFrak57PlusPackaging = 0;
+        $proporPercentFrak58 = 0;
+        $proporPercentFrak58PlusPackaging = 0;
+        $proporPercentFrak60 = 0;
+        $proporPercentFrak60PlusPackaging = 0;
 
         foreach ($laporanProduksi['packagingNFraksinasi']['production'] as $production) {
             if ($production['name'] === 'Fraksinasi') {
                 foreach ($production['items'] as $item) {
                     if ($item['name'] === 'RBD Olein IV-56') {
                         $proporPercentFrak56 = $item['percentage'];
-                        break;
+                    }else if ($item['name'] === 'RBD Olein IV-57') {
+                        $proporPercentFrak57 = $item['percentage'];
+                    }else if ($item['name'] === 'RBD Olein IV-58') {
+                        $proporPercentFrak58 = $item['percentage'];
+                    }else if ($item['name'] === 'RBD Olein IV-60') {
+                        $proporPercentFrak60 = $item['percentage'];
                     }
                 }
             } elseif ($production['name'] === 'Packaging') {
                 foreach ($production['items'] as $item) {
                     if ($item['name'] === 'RBD Olein IV-56') {
                         $proporPercentFrak56PlusPackaging = $item['percentage'];
-                        break;
+                    }else if ($item['name'] === 'RBD Olein IV-57') {
+                        $proporPercentFrak57PlusPackaging = $item['percentage'];
+                    }else if ($item['name'] === 'RBD Olein IV-58') {
+                        $proporPercentFrak58PlusPackaging = $item['percentage'];
+                    }else if ($item['name'] === 'RBD Olein IV-60') {
+                        $proporPercentFrak60PlusPackaging = $item['percentage'];
                     }
                 }
             }
@@ -2455,23 +3547,118 @@ class Controller extends BaseController
             'coa_asuransi_gudang_filling_cat2', 'coa_depresiasi_cat2'
         ]);
 
+        $settingPackagingCostFraksinasi57 = $this->getSettingIds([
+            'coa_gaji_dan_tunjangan_cat2', 'coa_inl_250_cat2', 'coa_inl_450_cat2','coa_inl_900_cat2','coa_inl_1800_cat2',
+            'coa_bahan_kimia_cat2', 'coa_pengangkutan_langsir_cat2', 'coa_pengepakan_lain_cat2',
+            'coa_asuransi_gudang_filling_cat2', 'coa_depresiasi_cat2'
+        ]);
+
+        $settingPackagingCostFraksinasi60 = $this->getSettingIds([
+            'coa_gaji_dan_tunjangan_cat2', 'coa_salvaco_1l_cat2', 'coa_salvaco_2l_cat2','coa_nusakita_1l_cat2','coa_nusakita_2l_cat2',
+            'coa_bahan_kimia_cat2', 'coa_pengangkutan_langsir_cat2', 'coa_pengepakan_lain_cat2',
+            'coa_asuransi_gudang_filling_cat2', 'coa_depresiasi_cat2'
+        ]);
+
         $tanggal = Carbon::parse($request->tanggal);
         $generalLedgerData = $this->getGeneralLedgerData($tanggal);
 
         $dataDirectRef = $this->processGeneralLedger($request, $settingDirectIdsRefinery, $generalLedgerData);
         $dataInDirectRef = $this->processGeneralLedger($request, $settingInDirectIdsRefinery, $generalLedgerData);
+
         $dataDirectFrak56 = $this->processGeneralLedger($request, $settingDirectIdsFraksinasi56, $generalLedgerData);
         $dataInDirectFrak56 = $this->processGeneralLedger($request, $settingInDirectIdsFraksinasi56, $generalLedgerData);
         $dataPackagingCostFrak56 = $this->processGeneralLedger($request, $settingPackagingCostFraksinasi56, $generalLedgerData);
 
+        $dataDirectFrak57 = $dataDirectFrak56;
+        $dataInDirectFrak57 = $dataInDirectFrak56;
+        $dataPackagingCostFrak57 = $this->processGeneralLedger($request, $settingPackagingCostFraksinasi57, $generalLedgerData);
+
+        $dataDirectFrak58 = $dataDirectFrak56;
+        $dataInDirectFrak58 = $dataInDirectFrak56;
+
+        $dataDirectFrak60 = $dataDirectFrak56;
+        $dataInDirectFrak60 = $dataInDirectFrak56;
+        $dataPackagingCostFrak60 = $this->processGeneralLedger($request, $settingPackagingCostFraksinasi60, $generalLedgerData);
+
         $costingHppRefinery = $this->costingHppRefinery($laporanProduksi, $proCost, $alokasiCost, $dataDirectRef, $dataInDirectRef);
+
         $costingHppFraksinasiIv56 = $this->costingHppFraksinasiIv56($laporanProduksi, $alokasiCost, $proporPercentFrak56, $proporPercentFrak56PlusPackaging, $konversiLiterToKg, $dataDirectFrak56, $dataInDirectFrak56, $dataPackagingCostFrak56);
-        $rpPerKgRbdpoFraksinasiIv56 = $avgPrice['rbdpo']['rpPerKg'];
+        $rpPerKgRbdpoFraksinasiIv56 = $bebanBlendingDowngrade['rbdpo']['rpPerKg'];
         $costingHppFraksinasiIv56Next = $this->nextCostingHppFraksinasiIv56($costingHppFraksinasiIv56, $rpPerKgRbdpoFraksinasiIv56, $proCost);
+
+        $costingHppFraksinasiIv57 = $this->costingHppFraksinasiIv57($laporanProduksi, $alokasiCost, $proporPercentFrak57, $proporPercentFrak57PlusPackaging, $konversiMlToKg, $dataDirectFrak57, $dataInDirectFrak57, $dataPackagingCostFrak57);
+        $rpPerKgRbdpoFraksinasiIv57 = $rpPerKgRbdpoFraksinasiIv56;
+        $costingHppFraksinasiIv57Next = $this->nextCostingHppFraksinasiIv57($costingHppFraksinasiIv57, $rpPerKgRbdpoFraksinasiIv57, $proCost);
+
+        $costingHppFraksinasiIv58 = $this->costingHppFraksinasiIv58($laporanProduksi, $alokasiCost, $proporPercentFrak58, $dataDirectFrak58, $dataInDirectFrak58);
+        $rpPerKgRbdpoFraksinasiIv58 = $rpPerKgRbdpoFraksinasiIv56;
+        $costingHppFraksinasiIv58Next = $this->nextCostingHppFraksinasiIv58($costingHppFraksinasiIv58, $rpPerKgRbdpoFraksinasiIv58, $proCost);
+
+        $costingHppFraksinasiIv60 = $this->costingHppFraksinasiIv60($laporanProduksi, $alokasiCost, $proporPercentFrak60, $proporPercentFrak60PlusPackaging, $konversiLiterToKg, $dataDirectFrak60, $dataInDirectFrak60, $dataPackagingCostFrak60);
+        $rpPerKgRbdpoFraksinasiIv60 = $rpPerKgRbdpoFraksinasiIv56;
+        $costingHppFraksinasiIv60Next = $this->nextCostingHppFraksinasiIv60($costingHppFraksinasiIv60, $rpPerKgRbdpoFraksinasiIv60, $proCost);
+
+        $allocationCosting56 = $costingHppFraksinasiIv56Next['allocationCostFraksinasiIv56'];
+        $allocationCosting57 = $costingHppFraksinasiIv57Next['allocationCostFraksinasiIv57'];
+        $allocationCosting58 = $costingHppFraksinasiIv58Next['allocationCostFraksinasiIv58'];
+        $allocationCosting60 = $costingHppFraksinasiIv60Next['allocationCostFraksinasiIv60'];
+
+        $rbdStearin56 = null;
+        $rbdStearin57 = null;
+        $rbdStearin58 = null;
+        $rbdStearin60 = null;
+
+        foreach ($allocationCosting56 as $item) {
+            if ($item['nama'] === 'RBD Stearin') {
+                $rbdStearin56 = $item;
+                break;
+            }
+        }
+        foreach ($allocationCosting57 as $item) {
+            if ($item['nama'] === 'RBD Stearin') {
+                $rbdStearin57 = $item;
+                break;
+            }
+        }
+        foreach ($allocationCosting58 as $item) {
+            if ($item['nama'] === 'RBD Stearin') {
+                $rbdStearin58 = $item;
+                break;
+            }
+        }
+        foreach ($allocationCosting60 as $item) {
+            if ($item['nama'] === 'RBD Stearin') {
+                $rbdStearin60 = $item;
+                break;
+            }
+        }
+
+        $rbdStearinTotal = $rbdStearin56['totalValue']+$rbdStearin57['totalValue']+$rbdStearin58['totalValue']+$rbdStearin60['totalValue'];
+
+        $rbdStearinQty56 = $costingHppFraksinasiIv56Next['rbdStearinQty'];
+        $rbdStearinQty57 = $costingHppFraksinasiIv57Next['rbdStearinQty'];
+        $rbdStearinQty58 = $costingHppFraksinasiIv58Next['rbdStearinQty'];
+        $rbdStearinQty60 = $costingHppFraksinasiIv60Next['rbdStearinQty'];
+        $rbdStearinQtyTotal = $rbdStearinQty56+$rbdStearinQty57+$rbdStearinQty58+$rbdStearinQty60;
+
+        $rbdStearinRpPerKg = $rbdStearinQtyTotal != 0 ? $rbdStearinTotal / $rbdStearinQtyTotal : 0;
+
+        $resultRBDStearin = [
+                'nama' => 'RBD Stearin Total',
+                'totalValue' => $rbdStearinTotal,
+                'RpPerKg' => $rbdStearinRpPerKg,
+        ];
+
+        $costingHppControll = $this->costingHppControll($costingHppRefinery, $costingHppFraksinasiIv56Next, $costingHppFraksinasiIv57Next, $costingHppFraksinasiIv58Next, $costingHppFraksinasiIv60Next, $resultRBDStearin, $costProd, $bebanBlendingDowngrade);
 
         return [
             'costingHppRefinery' => $costingHppRefinery,
             'costingHppFraksinasiIv56' => $costingHppFraksinasiIv56Next,
+            'costingHppFraksinasiIv57' => $costingHppFraksinasiIv57Next,
+            'costingHppFraksinasiIv58' => $costingHppFraksinasiIv58Next,
+            'costingHppFraksinasiIv60' => $costingHppFraksinasiIv60Next,
+            'rbdStearinTotal' => $resultRBDStearin,
+            'costingHppControll' => $costingHppControll,
         ];
     }
 
@@ -2551,6 +3738,89 @@ class Controller extends BaseController
     private function getSettingIds(array $settingNames)
     {
         return Setting::whereIn('setting_name', $settingNames)->pluck('id')->toArray();
+    }
+
+    public function processCostProdPeriod(Request $request)
+    {
+        $settingNames = [
+            'coa_bahan_baku_mr', 'coa_gaji_tunjangan_sosial_pimpinan_mr', 'coa_gaji_tunjangan_sosial_pelaksana_mr',
+            'coa_bahan_bakar_mr', 'coa_bahan_kimia_pendukung_produksi_mr', 'coa_analisa_lab_mr', 'coa_listrik_mr',
+            'coa_air_mr', 'coa_assuransi_pabrik_mr', 'coa_limbah_pihak3_mr', 'coa_bengkel_pemeliharaan_mr',
+            'coa_gaji_tunjangan_mr', 'coa_salvaco_mr', 'coa_nusakita_mr', 'coa_inl_mr', 'coa_minyakita_mr',
+            'coa_bahan_kimia_mr', 'coa_pengangkutan_langsir_mr', 'coa_pengepakan_lain_mr',
+            'coa_asuransi_gudang_filling_mr', 'coa_depresiasi_mr'
+        ];
+
+        $settings = Setting::whereIn('setting_name', $settingNames)->get();
+
+        $settingIds = $settings->pluck('id')->toArray();
+
+        $tanggal = Carbon::parse($request->tanggal);
+        $debe = Debe::with('cat3', 'mReport', 'cCentre', 'plant', 'allocation')->get();
+        $coa = Setting::whereIn('id', $settingIds)->orderBy('id')->get();
+        $gl = collect($this->getGeneralLedgerData($tanggal));
+
+        $laporanData = $this->processRecapData($request);
+
+        $totalQtyRefineryCPO = 0;
+        if (isset($laporanData['laporanProduksi'])) {
+            foreach ($laporanData['laporanProduksi'] as $laporan) {
+                if ($laporan['nama'] === 'Refinery') {
+                    foreach ($laporan['uraian'] as $uraian) {
+                        if ($uraian['nama'] === 'CPO (Olah)') {
+                            $totalQtyRefineryCPO = $uraian['total_qty'];
+                            break 2;
+                        }
+                    }
+                }
+            }
+        }
+
+        $data = $coa->map(function($coaSetting) use ($debe, $gl, $totalQtyRefineryCPO) {
+            $coaNumbers = explode(',', $coaSetting->setting_value);
+            $coaData = [];
+            $totalDebitSetting = 0;
+            $totalCreditSetting = 0;
+            $mReportName = '';
+
+            foreach ($coaNumbers as $coaNumber) {
+                $glData = $gl->filter(function($item) use ($coaNumber) {
+                    return $item['account_account']['code'] == $coaNumber;
+                });
+
+                $debeModel = $debe->firstWhere('coa', $coaNumber);
+                $mReportName = $debeModel ? $debeModel->mReport->nama : '';
+
+                $totalDebit = $glData->sum('debit');
+                $totalCredit = $glData->sum('credit');
+                $result = $totalDebit - $totalCredit;
+
+                $totalDebitSetting += $totalDebit;
+                $totalCreditSetting += $totalCredit;
+
+                $coaData[] = [
+                    'coa_number' => $coaNumber,
+                    'debe' => $debeModel,
+                    'gl' => $glData->values(),
+                    'total_debit' => $totalDebit,
+                    'total_credit' => $totalCredit,
+                    'result' => $result
+                ];
+            }
+
+            return [
+                'nama' => $mReportName,
+                'setting' => $coaSetting->setting_name,
+                'total_debit' => $totalDebitSetting,
+                'total_credit' => $totalCreditSetting,
+                'result' => $totalDebitSetting - $totalCreditSetting,
+                'total_qty_refinery_cpo_olah' => $totalQtyRefineryCPO,
+                'rp_per_kg_cpo_olah' => $totalQtyRefineryCPO > 0 ? ($totalDebitSetting - $totalCreditSetting) / $totalQtyRefineryCPO : 0,
+                'coa' => $coaData
+            ];
+        });
+
+        return ['data' => $data->values()];
     }
 
     public function indexLaporanProduksi(Request $request)
