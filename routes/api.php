@@ -103,6 +103,8 @@ Route::post('target-real/date', [App\Http\Controllers\Api\Target\TargetRealContr
 Route::get('target-rkap', [App\Http\Controllers\Api\Target\TargetRkapController::class, 'index']);
 Route::get('target-rkap/get/{id}', [App\Http\Controllers\Api\Target\TargetRkapController::class, 'show']);
 Route::post('target-rkap/date', [App\Http\Controllers\Api\Target\TargetRkapController::class, 'indexDate']);
+//Target Recap
+Route::post('target-recap/date', [App\Http\Controllers\Api\Target\RecapTargetController::class, 'recapTarget']);
 
 //Harga Satuan Produksi
 Route::get('harga-satuan', [App\Http\Controllers\Api\Config\HargaSatuanProduksiController::class, 'index']);
