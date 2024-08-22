@@ -4,12 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\BiayaPenyusutan;
 use App\Models\cpoKpbn;
+use App\Models\DailyDMO;
 use App\Models\Debe;
 use App\Models\InitialSupply;
+use App\Models\KapasitasWhPallet;
 use App\Models\LaporanProduksi;
 use App\Models\LevyDutyBulky;
 use App\Models\MarketRoutersBulky;
+use App\Models\MonthlyDMO;
 use App\Models\Setting;
+use App\Models\StokBulky;
+use App\Models\StokRetail;
+use App\Models\TargetReal;
+use App\Models\TargetRKAP;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
@@ -3441,7 +3448,15 @@ class Controller extends BaseController
         $proCost = $this->processProCost($request);
         $laporanProduksi = $this->processPenyusutan($request);
         $bebanBlendingDowngrade = $this->processQtyBebanBlendingDowngradeForCostingHpp($request, $proCost, $laporanProduksi);
-        $costProd = $this->processCostProdPeriod($request);
+        $settingNames = [
+            'coa_bahan_baku_mr', 'coa_gaji_tunjangan_sosial_pimpinan_mr', 'coa_gaji_tunjangan_sosial_pelaksana_mr',
+            'coa_bahan_bakar_mr', 'coa_bahan_kimia_pendukung_produksi_mr', 'coa_analisa_lab_mr', 'coa_listrik_mr',
+            'coa_air_mr', 'coa_assuransi_pabrik_mr', 'coa_limbah_pihak3_mr', 'coa_bengkel_pemeliharaan_mr',
+            'coa_gaji_tunjangan_mr', 'coa_salvaco_mr', 'coa_nusakita_mr', 'coa_inl_mr', 'coa_minyakita_mr',
+            'coa_bahan_kimia_mr', 'coa_pengangkutan_langsir_mr', 'coa_pengepakan_lain_mr',
+            'coa_asuransi_gudang_filling_mr', 'coa_depresiasi_mr'
+        ];
+        $costProd = $this->processCostProdPeriod($request, $settingNames);
 
         $alokasiBiaya = $laporanProduksi['recap']['alokasiBiaya']['allocation'];
 
@@ -3740,17 +3755,8 @@ class Controller extends BaseController
         return Setting::whereIn('setting_name', $settingNames)->pluck('id')->toArray();
     }
 
-    public function processCostProdPeriod(Request $request)
+    public function processCostProdPeriod(Request $request, $settingNames)
     {
-        $settingNames = [
-            'coa_bahan_baku_mr', 'coa_gaji_tunjangan_sosial_pimpinan_mr', 'coa_gaji_tunjangan_sosial_pelaksana_mr',
-            'coa_bahan_bakar_mr', 'coa_bahan_kimia_pendukung_produksi_mr', 'coa_analisa_lab_mr', 'coa_listrik_mr',
-            'coa_air_mr', 'coa_assuransi_pabrik_mr', 'coa_limbah_pihak3_mr', 'coa_bengkel_pemeliharaan_mr',
-            'coa_gaji_tunjangan_mr', 'coa_salvaco_mr', 'coa_nusakita_mr', 'coa_inl_mr', 'coa_minyakita_mr',
-            'coa_bahan_kimia_mr', 'coa_pengangkutan_langsir_mr', 'coa_pengepakan_lain_mr',
-            'coa_asuransi_gudang_filling_mr', 'coa_depresiasi_mr'
-        ];
-
         $settings = Setting::whereIn('setting_name', $settingNames)->get();
 
         $settingIds = $settings->pluck('id')->toArray();
@@ -4524,4 +4530,464 @@ class Controller extends BaseController
     //     processProCost
     // }
 
+    public function targetResult(Request $request)
+    {
+        $date = Carbon::parse($request->tanggal);
+            $year = $date->year;
+            $month = $date->month;
+
+            $tanggal = $request->tanggal;
+
+            $dataReal = TargetReal::with('productable')
+                ->whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
+                ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
+                ->orderBy('productable_type', 'desc')
+                ->orderBy('productable_id', 'asc')
+                ->orderBy('tanggal', 'asc')
+                ->get();
+
+            if ($dataReal->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            $targetRealResult = $this->processTarget($dataReal);
+
+            $dataRkap = TargetRKAP::with('productable')
+                ->whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
+                ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
+                ->orderBy('productable_type', 'desc')
+                ->orderBy('productable_id', 'asc')
+                ->orderBy('tanggal', 'asc')
+                ->get();
+
+            if ($dataRkap->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            $targetRkapResult = $this->processTarget($dataRkap);
+
+            $differenceResult = $this->calculateDifferenceTarget($targetRealResult['target'], $targetRkapResult['target']);
+
+            $dataDailyDmo = DailyDMO::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
+                ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
+                ->orderBy('tanggal')
+                ->get();
+
+            if ($dataDailyDmo->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+            $totalDailyDmo = $dataDailyDmo->sum('value');
+
+            $dataMonthlyDmo = MonthlyDMO::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
+                ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
+                ->orderBy('tanggal')
+                ->first();
+
+            if (is_null($dataMonthlyDmo)) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            $totalMonthlyDmo = $dataMonthlyDmo->dmo;
+
+            $cpoOlahRkap = $dataMonthlyDmo->cpo_olah_rkap;
+            $kapasitasUtility = $dataMonthlyDmo->kapasitas_utility;
+            $pengaliUtility = $dataMonthlyDmo->pengali_kapasitas_utility;
+            $utility = $kapasitasUtility * $pengaliUtility;
+
+            //cpo Olah
+            $laporanProduksi = $this->indexLaporanProduksi($request);
+
+            $cpoOlahReal = 0;
+
+            foreach ($laporanProduksi['laporanProduksi'] as $produksi) {
+                if ($produksi['nama'] === 'Refinery') {
+                    foreach ($produksi['uraian'] as $uraian) {
+                        if ($uraian['nama'] === 'CPO (Olah)') {
+                            $cpoOlahReal = $uraian['total_qty'];
+                            break 2;
+                        }
+                    }
+                }
+            }
+
+            $qtyProduksiVsRkap = [
+                [
+                    'name' => 'Total Real',
+                    'value' => $cpoOlahReal
+                ],
+                [
+                    'name' => 'Total RKAP',
+                    'value' => $cpoOlahRkap
+                ],
+                [
+                    'name' => 'Difference',
+                    'value' => abs($cpoOlahReal - $cpoOlahRkap)
+                ],
+                [
+                    'name' => 'Percentage To Target',
+                    'value' => ($cpoOlahReal/$cpoOlahRkap)*100,
+                    'remaining' => max(0, 100 - (($cpoOlahReal/$cpoOlahRkap)*100))
+                ]
+            ];
+
+            $qtyProduksiVsUtility = [
+                [
+                    'name' => 'Total Real',
+                    'value' => $cpoOlahReal
+                ],
+                [
+                    'name' => 'Total Utility',
+                    'value' => $utility
+                ],
+                [
+                    'name' => 'Difference',
+                    'value' => abs($cpoOlahReal - $utility)
+                ],
+                [
+                    'name' => 'Percentage To Target',
+                    'value' => ($cpoOlahReal/$utility)*100,
+                    'remaining' => max(0, 100 - (($cpoOlahReal/$utility)*100))
+                ]
+            ];
+
+            $combinedResult = $this->combinedResultProcessTarget($targetRealResult, $targetRkapResult, $differenceResult, $totalDailyDmo, $totalMonthlyDmo, $qtyProduksiVsRkap, $qtyProduksiVsUtility);
+
+            return $combinedResult;
+    }
+
+    public function combinedResultProcessTarget($targetRealResult, $targetRkapResult, $differenceResult, $totalDailyDmo, $totalMonthlyDmo, $qtyProduksiVsRkap, $qtyProduksiVsUtility)
+    {
+        $totalRealBulky = $targetRealResult['target'][0]['total'] ?? 0;
+        $totalRealRetail = $targetRealResult['target'][1]['total'] ?? 0;
+        $totalRealDmo = $totalDailyDmo;
+
+        $totalRkapBulky = $targetRkapResult['target'][0]['total'] ?? 0;
+        $totalRkapRetail = $targetRkapResult['target'][1]['total'] ?? 0;
+        $totalRkapDmo = $totalMonthlyDmo;
+
+        $totalReal = $totalRealBulky + $totalRealRetail + $totalRealDmo;
+        $totalRkap = $totalRkapBulky + $totalRkapRetail + $totalRkapDmo;
+        $totalDifference = abs($totalReal - $totalRkap);
+        $percentageToTarget = $totalRkap > 0 ? ($totalReal / $totalRkap) * 100 : 0;
+
+        $combinedResult = [
+            'targetReal' => array_merge(
+                $targetRealResult['target'],
+                [
+                    [
+                        'name' => 'Total DMO',
+                        'total' => $totalDailyDmo
+                    ]
+                ]
+            ),
+            'targetRkap' => array_merge(
+                $targetRkapResult['target'],
+                [
+                    [
+                        'name' => 'Total DMO',
+                        'total' => $totalMonthlyDmo
+                    ]
+                ]
+            ),
+            'difference' => array_merge(
+                $differenceResult,
+                [
+                    [
+                        'name' => 'Total DMO',
+                        'total' => abs($totalMonthlyDmo - $totalDailyDmo)
+                    ]
+                ]
+            ),
+            'percentageToTarget' => [
+                [
+                    'name' => 'Total Bulky',
+                    'real' => $this->calculatePercentageTarget($targetRealResult['target'], $targetRkapResult['target'], 'Total Bulky'),
+                    'remaining' => max(0, 100 - $this->calculatePercentageTarget($targetRealResult['target'], $targetRkapResult['target'], 'Total Bulky'))
+                ],
+                [
+                    'name' => 'Total Retail',
+                    'real' => $this->calculatePercentageTarget($targetRealResult['target'], $targetRkapResult['target'], 'Total Retail'),
+                    'remaining' => max(0, 100 - $this->calculatePercentageTarget($targetRealResult['target'], $targetRkapResult['target'], 'Total Retail'))
+                ],
+                [
+                    'name' => 'Total DMO',
+                    'real' => $this->calculatePercentageDmoTarget($totalDailyDmo, $totalMonthlyDmo),
+                    'remaining' => max(0, 100 - $this->calculatePercentageDmoTarget($totalDailyDmo, $totalMonthlyDmo))
+                ]
+            ],
+            'totalOverall' => [
+                [
+                    'name' => 'Total Real',
+                    'value' => $totalReal
+                ],
+                [
+                    'name' => 'Total RKAP',
+                    'value' => $totalRkap
+                ],
+                [
+                    'name' => 'Difference',
+                    'value' => $totalDifference
+                ],
+                [
+                    'name' => 'Percentage To Target',
+                    'value' => $percentageToTarget,
+                    'remaining' => max(0, 100 - $percentageToTarget)
+                ]
+            ],
+            'qtyProduksiVsRkap' => $qtyProduksiVsRkap,
+            'qtyProduksiVsUtility' => $qtyProduksiVsUtility
+        ];
+
+        return $combinedResult;
+    }
+
+
+    public function processTarget($data)
+    {
+        $groupedData = $data->groupBy(function ($item) {
+            return $item->productable_id . '-' . $item->productable_type;
+        });
+
+        $totals = $groupedData->map(function ($group) {
+            $totalValue = $group->sum('value');
+            $latestDate = $group->max('tanggal');
+            $firstItem = $group->first();
+
+            return [
+                'productable_id' => $firstItem->productable_id,
+                'productable_type' => $firstItem->productable_type,
+                'productable_name' => $firstItem->productable->name,
+                'total' => $totalValue,
+                'latest_date' => $latestDate,
+            ];
+        })->values();
+
+        $targetRealBulky = $totals->where('productable_type', "App\\Models\\MasterBulkProduksi")->values();
+        $targetRealRetail = $totals->where('productable_type', "App\\Models\\MasterRetailProduksi")->values();
+
+        $totalBulkProduksi = $targetRealBulky->sum('total');
+        $totalRetailProduksi = $targetRealRetail->sum('total');
+
+        $result = [
+            'target' => [
+                [
+                    'name' => 'Total Bulky',
+                    'total' => $totalBulkProduksi,
+                    'items' => $targetRealBulky
+                ],
+                [
+                    'name' => 'Total Retail',
+                    'total' => $totalRetailProduksi,
+                    'items' => $targetRealRetail
+                ]
+            ]
+        ];
+
+        return $result;
+    }
+
+    public function calculateDifferenceTarget($targetReal, $targetRkap)
+    {
+        $difference = [];
+
+        foreach ($targetReal as $index => $realItem) {
+            $rkapItem = $targetRkap[$index] ?? null;
+
+            $totalDifference = $realItem['total'] - ($rkapItem['total'] ?? 0);
+
+            $itemDifferences = collect($realItem['items'])->map(function ($realItemData) use ($rkapItem) {
+                $matchingRkapItem = collect($rkapItem['items'] ?? [])->firstWhere('productable_id', $realItemData['productable_id']);
+
+                return [
+                    'productable_id' => $realItemData['productable_id'],
+                    'productable_type' => $realItemData['productable_type'],
+                    'productable_name' => $realItemData['productable_name'],
+                    'total' => $realItemData['total'] - ($matchingRkapItem['total'] ?? 0),
+                    'latest_date' => $realItemData['latest_date'],
+                ];
+            })->values();
+
+            $difference[] = [
+                'name' => $realItem['name'],
+                'total' => $totalDifference,
+                'items' => $itemDifferences,
+            ];
+        }
+
+        return $difference;
+    }
+
+    public function calculatePercentageTarget($targetReal, $targetRkap, $name)
+    {
+        $real = collect($targetReal)->firstWhere('name', $name);
+        $rkap = collect($targetRkap)->firstWhere('name', $name);
+
+        if ($rkap && $rkap['total'] > 0) {
+            return ($real['total'] / $rkap['total']) * 100;
+        }
+
+        return 0;
+    }
+
+    public function calculatePercentageDmoTarget($dailyDmo, $monthlyDmo)
+    {
+        if ($monthlyDmo > 0) {
+            return ($dailyDmo / $monthlyDmo) * 100;
+        }
+
+        return 0;
+    }
+
+    public function latestStokRetail()
+    {
+        $subquery = StokRetail::select('location_id', 'productable_id', DB::raw('MAX(tanggal) as max_tanggal'))
+                ->groupBy('location_id', 'productable_id');
+
+            $data = StokRetail::with(['productable.product.productable', 'location'])
+                ->joinSub($subquery, 'latest_entries', function($join) {
+                    $join->on('stok_retail.location_id', '=', 'latest_entries.location_id')
+                        ->on('stok_retail.productable_id', '=', 'latest_entries.productable_id')
+                        ->on('stok_retail.tanggal', '=', 'latest_entries.max_tanggal');
+                })
+                ->get();
+
+        $subquery2 = KapasitasWhPallet::select('location_id', DB::raw('MAX(tanggal) as max_tanggal'))
+        ->groupBy('location_id');
+
+            $dataPallet = KapasitasWhPallet::with('location')
+                ->joinSub($subquery2, 'latest_entries', function ($join) {
+                    $join->on('kapasitas_wh_pallet.location_id', '=', 'latest_entries.location_id')
+                        ->on('kapasitas_wh_pallet.tanggal', '=', 'latest_entries.max_tanggal');
+                })
+                ->get();
+
+            $groupedData = $data->groupBy(function ($item) {
+                return $item->location->name;
+            });
+
+            $result = $groupedData->map(function ($items, $locationName) {
+                return [
+                    'name' => $locationName,
+                    'totalCtn' => $items->sum('ctn'),
+                    'items' => $items->map(function ($item) {
+                        $item->makeHidden('productable');
+                        $item->extended_productable;
+                        return $item;
+                    }),
+                ];
+            })->values();
+
+            $totalStock = $data->groupBy('productable_id')->map(function ($productItems) {
+                $firstProduct = $productItems->first()->extended_productable;
+                $productName = $firstProduct->product->productable->name . ' ' .
+                            $firstProduct->product->nama . ' ' .
+                            $firstProduct->nama;
+
+                return [
+                    'name' => $productName,
+                    'total' => $productItems->sum('ctn')
+                ];
+            })->values();
+
+            $totalCtn = $data->sum('ctn');
+
+            if ($result->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            return [
+                'location' => $result,
+                'totalStock' => [
+                    'totalCtn' => $totalCtn,
+                    'item' => $totalStock,
+                ],
+                'dataPallet' => $dataPallet,
+            ];
+    }
+
+    public function latestStokBulky()
+    {
+
+        $subquery = StokBulky::select('tank_id', DB::raw('MAX(tanggal) as max_tanggal'))
+                ->groupBy('tank_id');
+
+            $data = StokBulky::with('productable', 'tank')
+                ->joinSub($subquery, 'latest_entries', function($join) {
+                    $join->on('stok_bulky.tank_id', '=', 'latest_entries.tank_id')
+                        ->on('stok_bulky.tanggal', '=', 'latest_entries.max_tanggal');
+                })
+                ->get();
+
+            if ($data->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            $groupedData = $data->groupBy(function ($item) {
+                if (isset($item->extended_productable['product']['productable'])) {
+                    return $item->extended_productable['product']['productable']['name'];
+                } elseif (isset($item->extended_productable['productable'])) {
+                    return $item->extended_productable['productable']['name'];
+                } elseif ($item->extended_productable) {
+                    return $item->extended_productable['name'];
+                } else {
+                    return 'Unknown';
+                }
+            });
+
+            $bulkyStock = [];
+            $kapasitasTotal = 0;
+            $stokMtTotal = 0;
+            $stokExcBtmTotal = 0;
+            $spaceTotal = 0;
+
+            foreach ($groupedData as $name => $items) {
+                $totalKapasitas = $items->sum(fn($item) => $item->tank->capacity);
+                $totalStockMt = $items->sum('stok_mt');
+                $totalStockExcBtm = $items->sum('stok_exc_btm_mt');
+                $totalSpace = $items->sum(fn($item) => $item->tank->capacity - $item->stok_mt);
+
+                $kapasitasTotal += $totalKapasitas;
+                $stokMtTotal += $totalStockMt;
+                $stokExcBtmTotal += $totalStockExcBtm;
+                $spaceTotal += $totalSpace;
+
+                $bulkyStock[] = [
+                    'name' => $name,
+                    'totalKapasitas' => $totalKapasitas,
+                    'totalStockMt' => $totalStockMt,
+                    'totalStockExcBtm' => $totalStockExcBtm,
+                    'totalSpace' => $totalSpace,
+                    'items' => $items->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'tank_id' => $item->tank_id,
+                            'tanggal' => $item->tanggal,
+                            'productable_id' => $item->productable_id,
+                            'productable_type' => $item->productable_type,
+                            'stok_mt' => $item->stok_mt,
+                            'stok_exc_btm_mt' => $item->stok_exc_btm_mt,
+                            'umur' => $item->umur,
+                            'remarks' => $item->remarks,
+                            'created_at' => $item->created_at,
+                            'updated_at' => $item->updated_at,
+                            'space' => $item->tank->capacity - $item->stok_mt,
+                            'extended_productable' => $item->extended_productable,
+                            'tank' => $item->tank,
+                        ];
+                    }),
+                ];
+            }
+
+            $grandTotal = [
+                'kapasitasTotal' => $kapasitasTotal,
+                'stokMtTotal' => $stokMtTotal,
+                'stokExcBtmTotal' => $stokExcBtmTotal,
+                'spaceTotal' => $spaceTotal,
+            ];
+
+        return [
+            'GrandTotal' => $grandTotal,
+            'bulkyStock' => $bulkyStock,
+        ];
+    }
 }

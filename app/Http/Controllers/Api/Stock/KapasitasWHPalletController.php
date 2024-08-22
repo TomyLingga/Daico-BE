@@ -209,12 +209,13 @@ class KapasitasWHPalletController extends Controller
     public function indexLatest()
     {
         try {
-            $subquery = KapasitasWhPallet::select('id', 'location_id', DB::raw('MAX(tanggal) as max_tanggal'))
+            $subquery = KapasitasWhPallet::select('location_id', DB::raw('MAX(tanggal) as max_tanggal'))
                 ->groupBy('location_id');
 
             $data = KapasitasWhPallet::with('location')
-                ->joinSub($subquery, 'latest_entries', function($join) {
-                    $join->on('kapasitas_wh_pallet.id', '=', 'latest_entries.id');
+                ->joinSub($subquery, 'latest_entries', function ($join) {
+                    $join->on('kapasitas_wh_pallet.location_id', '=', 'latest_entries.location_id')
+                        ->on('kapasitas_wh_pallet.tanggal', '=', 'latest_entries.max_tanggal');
                 })
                 ->get();
 
@@ -232,6 +233,7 @@ class KapasitasWHPalletController extends Controller
             ], 500);
         }
     }
+
 
     public function show($id)
     {

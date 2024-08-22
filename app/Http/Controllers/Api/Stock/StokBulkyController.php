@@ -270,88 +270,10 @@ class StokBulkyController extends Controller
     public function indexLatest()
     {
         try {
-            $subquery = StokBulky::select('tank_id', DB::raw('MAX(tanggal) as max_tanggal'))
-                ->groupBy('tank_id');
 
-            $data = StokBulky::with('productable', 'tank')
-                ->joinSub($subquery, 'latest_entries', function($join) {
-                    $join->on('stok_bulky.tank_id', '=', 'latest_entries.tank_id')
-                        ->on('stok_bulky.tanggal', '=', 'latest_entries.max_tanggal');
-                })
-                ->get();
-
-            if ($data->isEmpty()) {
-                return response()->json(['message' => $this->messageMissing], 401);
-            }
-
-            $groupedData = $data->groupBy(function ($item) {
-                if (isset($item->extended_productable['product']['productable'])) {
-                    return $item->extended_productable['product']['productable']['name'];
-                } elseif (isset($item->extended_productable['productable'])) {
-                    return $item->extended_productable['productable']['name'];
-                } elseif ($item->extended_productable) {
-                    return $item->extended_productable['name'];
-                } else {
-                    return 'Unknown';
-                }
-            });
-
-            $bulkyStock = [];
-            $kapasitasTotal = 0;
-            $stokMtTotal = 0;
-            $stokExcBtmTotal = 0;
-            $spaceTotal = 0;
-
-            foreach ($groupedData as $name => $items) {
-                $totalKapasitas = $items->sum(fn($item) => $item->tank->capacity);
-                $totalStockMt = $items->sum('stok_mt');
-                $totalStockExcBtm = $items->sum('stok_exc_btm_mt');
-                $totalSpace = $items->sum(fn($item) => $item->tank->capacity - $item->stok_mt);
-
-                $kapasitasTotal += $totalKapasitas;
-                $stokMtTotal += $totalStockMt;
-                $stokExcBtmTotal += $totalStockExcBtm;
-                $spaceTotal += $totalSpace;
-
-                $bulkyStock[] = [
-                    'name' => $name,
-                    'totalKapasitas' => $totalKapasitas,
-                    'totalStockMt' => $totalStockMt,
-                    'totalStockExcBtm' => $totalStockExcBtm,
-                    'totalSpace' => $totalSpace,
-                    'items' => $items->map(function ($item) {
-                        return [
-                            'id' => $item->id,
-                            'tank_id' => $item->tank_id,
-                            'tanggal' => $item->tanggal,
-                            'productable_id' => $item->productable_id,
-                            'productable_type' => $item->productable_type,
-                            'stok_mt' => $item->stok_mt,
-                            'stok_exc_btm_mt' => $item->stok_exc_btm_mt,
-                            'umur' => $item->umur,
-                            'remarks' => $item->remarks,
-                            'created_at' => $item->created_at,
-                            'updated_at' => $item->updated_at,
-                            'space' => $item->tank->capacity - $item->stok_mt,
-                            'extended_productable' => $item->extended_productable,
-                            'tank' => $item->tank,
-                        ];
-                    }),
-                ];
-            }
-
-            $grandTotal = [
-                'kapasitasTotal' => $kapasitasTotal,
-                'stokMtTotal' => $stokMtTotal,
-                'stokExcBtmTotal' => $stokExcBtmTotal,
-                'spaceTotal' => $spaceTotal,
-            ];
-
+            $data = $this->latestStokBulky();
             return response()->json([
-                'data' => [
-                    'GrandTotal' => $grandTotal,
-                    'bulkyStock' => $bulkyStock,
-                ],
+                'data' => $data,
                 'message' => $this->messageAll
             ], 200);
 

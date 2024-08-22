@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Stock;
 
 use App\Http\Controllers\Controller;
+use App\Models\KapasitasWhPallet;
 use App\Models\Location;
 use App\Models\MasterProduct;
 use App\Models\MasterRetail;
@@ -358,58 +359,11 @@ class StokRetailController extends Controller
     public function indexLatest()
     {
         try {
-            $subquery = StokRetail::select('location_id', 'productable_id', DB::raw('MAX(tanggal) as max_tanggal'))
-                ->groupBy('location_id', 'productable_id');
 
-            $data = StokRetail::with(['productable.product.productable', 'location'])
-                ->joinSub($subquery, 'latest_entries', function($join) {
-                    $join->on('stok_retail.location_id', '=', 'latest_entries.location_id')
-                        ->on('stok_retail.productable_id', '=', 'latest_entries.productable_id')
-                        ->on('stok_retail.tanggal', '=', 'latest_entries.max_tanggal');
-                })
-                ->get();
-
-            $groupedData = $data->groupBy(function ($item) {
-                return $item->location->name;
-            });
-
-            $result = $groupedData->map(function ($items, $locationName) {
-                return [
-                    'name' => $locationName,
-                    'totalCtn' => $items->sum('ctn'),
-                    'items' => $items->map(function ($item) {
-                        $item->makeHidden('productable');
-                        $item->extended_productable;
-                        return $item;
-                    }),
-                ];
-            })->values();
-
-            // Calculate totalStock
-            $totalStock = $data->groupBy('productable_id')->map(function ($productItems) {
-                $firstProduct = $productItems->first()->extended_productable;
-                $productName = $firstProduct->product->productable->name . ' ' .
-                            $firstProduct->product->nama . ' ' .
-                            $firstProduct->nama;
-
-                return [
-                    'name' => $productName,
-                    'total' => $productItems->sum('ctn')
-                ];
-            })->values();
-
-            $totalCtn = $data->sum('ctn');
-
-            if ($result->isEmpty()) {
-                return response()->json(['message' => $this->messageMissing], 401);
-            }
+            $data = $this->latestStokRetail();
 
             return response()->json([
-                'location' => $result,
-                'totalStock' => [
-                    'totalCtn' => $totalCtn,
-                    'item' => $totalStock,
-                ],
+                'dataPallet' => $data,
                 'message' => $this->messageAll,
             ], 200);
         } catch (QueryException $e) {

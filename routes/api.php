@@ -49,6 +49,7 @@ Route::get('outstanding-cpo/get/{id}', [App\Http\Controllers\Api\CPO\Outstanding
 Route::get('cpo-kpbn', [App\Http\Controllers\Api\CPO\KpbnController::class, 'index']);
 Route::get('cpo-kpbn/get/{id}', [App\Http\Controllers\Api\CPO\KpbnController::class, 'show']);
 Route::post('cpo-kpbn/date', [App\Http\Controllers\Api\CPO\KpbnController::class, 'indexDate']);
+Route::post('cpo-kpbn/year', [App\Http\Controllers\Api\CPO\KpbnController::class, 'indexYear']);
 //Master Bulky
 Route::get('bulky', [App\Http\Controllers\Api\Config\MasterBulkyController::class, 'index']);
 Route::get('bulky/get/{id}', [App\Http\Controllers\Api\Config\MasterBulkyController::class, 'show']);
@@ -188,6 +189,8 @@ Route::post('costing-hpp/date', [App\Http\Controllers\Api\CostingHPP\CostingHppC
 Route::get('biaya-penyusutan', [App\Http\Controllers\Api\Penyusutan\BiayaPenyusutanController::class, 'index']);
 Route::get('biaya-penyusutan/get/{id}', [App\Http\Controllers\Api\Penyusutan\BiayaPenyusutanController::class, 'show']);
 Route::get('biaya-penyusutan/latest', [App\Http\Controllers\Api\Penyusutan\BiayaPenyusutanController::class, 'indexLatest']);
+
+Route::post('dashboard/date', [App\Http\Controllers\Api\Dashboard\MainDashboardController::class, 'indexPeriod']);
 
 Route::group(['middleware' => 'levelone.checker'], function () {
     //Kategori Uraian Produksi

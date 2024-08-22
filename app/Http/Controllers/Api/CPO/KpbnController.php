@@ -104,6 +104,36 @@ class KpbnController extends Controller
         }
     }
 
+    public function indexYear(Request $request)
+    {
+        try {
+            $tanggal = $request->tanggal;
+
+            $data = cpoKpbn::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
+                ->orderBy('tanggal')
+                ->get();
+
+            $avg = collect($data)->avg('avg');
+
+            return $data->isEmpty()
+                ? response()->json(['message' => $this->messageMissing], 401)
+                : response()->json([
+                    'avg' => $avg,
+                    'data' => $data,
+                    'message' => $this->messageAll
+                ], 200);
+
+        } catch (QueryException $e) {
+            return response()->json([
+                'message' => $this->messageFail,
+                'err' => $e->getTrace()[0],
+                'errMsg' => $e->getMessage(),
+                // 'code' => 500,
+                'success' => false,
+            ], 500);
+        }
+    }
+
     public function show($id)
     {
         try {
