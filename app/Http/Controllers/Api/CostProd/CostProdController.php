@@ -76,7 +76,16 @@ class CostProdController extends Controller
 
     public function indexPeriod(Request $request)
     {
-        $data = $this->processCostProdPeriod($request);
+        $settingNames = [
+            'coa_bahan_baku_mr', 'coa_gaji_tunjangan_sosial_pimpinan_mr', 'coa_gaji_tunjangan_sosial_pelaksana_mr',
+            'coa_bahan_bakar_mr', 'coa_bahan_kimia_pendukung_produksi_mr', 'coa_analisa_lab_mr', 'coa_listrik_mr',
+            'coa_air_mr', 'coa_assuransi_pabrik_mr', 'coa_limbah_pihak3_mr', 'coa_bengkel_pemeliharaan_mr',
+            'coa_gaji_tunjangan_mr', 'coa_salvaco_mr', 'coa_nusakita_mr', 'coa_inl_mr', 'coa_minyakita_mr',
+            'coa_bahan_kimia_mr', 'coa_pengangkutan_langsir_mr', 'coa_pengepakan_lain_mr',
+            'coa_asuransi_gudang_filling_mr', 'coa_depresiasi_mr'
+        ];
+
+        $data = $this->processCostProdPeriod($request, $settingNames);
 
         return response()->json([
             'data' => $data,
