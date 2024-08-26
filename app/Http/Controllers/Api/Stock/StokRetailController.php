@@ -363,7 +363,7 @@ class StokRetailController extends Controller
             $data = $this->latestStokRetail();
 
             return response()->json([
-                'dataPallet' => $data,
+                'data' => $data,
                 'message' => $this->messageAll,
             ], 200);
         } catch (QueryException $e) {
