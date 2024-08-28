@@ -92,10 +92,14 @@ Route::get('laporan-produksi/get/{id}', [App\Http\Controllers\Api\DetAlloc\Lapor
 Route::get('daily-dmo', [App\Http\Controllers\Api\Target\DailyDmoController::class, 'index']);
 Route::get('daily-dmo/get/{id}', [App\Http\Controllers\Api\Target\DailyDmoController::class, 'show']);
 Route::post('daily-dmo/date', [App\Http\Controllers\Api\Target\DailyDmoController::class, 'indexDate']);
-//Daily DMO
+//Monthly DMO
 Route::get('monthly-dmo', [App\Http\Controllers\Api\Target\MonthlyDmoController::class, 'index']);
 Route::get('monthly-dmo/get/{id}', [App\Http\Controllers\Api\Target\MonthlyDmoController::class, 'show']);
 Route::post('monthly-dmo/date', [App\Http\Controllers\Api\Target\MonthlyDmoController::class, 'indexDate']);
+//Stok Awal CPO
+Route::get('stock-awal-cpo', [App\Http\Controllers\Api\CPO\StockAwalCpoController::class, 'index']);
+Route::get('stock-awal-cpo/get/{id}', [App\Http\Controllers\Api\CPO\StockAwalCpoController::class, 'show']);
+Route::post('stock-awal-cpo/date', [App\Http\Controllers\Api\CPO\StockAwalCpoController::class, 'indexDate']);
 //Target Real
 Route::get('target-real', [App\Http\Controllers\Api\Target\TargetRealController::class, 'index']);
 Route::get('target-real/get/{id}', [App\Http\Controllers\Api\Target\TargetRealController::class, 'show']);
@@ -205,6 +209,9 @@ Route::group(['middleware' => 'levelone.checker'], function () {
     //Monthly DMO
     Route::post('monthly-dmo/add', [App\Http\Controllers\Api\Target\MonthlyDmoController::class, 'store']);
     Route::post('monthly-dmo/update/{id}', [App\Http\Controllers\Api\Target\MonthlyDmoController::class, 'update']);
+    //Stok awal CPO
+    Route::post('stock-awal-cpo/add', [App\Http\Controllers\Api\CPO\StockAwalCpoController::class, 'store']);
+    Route::post('stock-awal-cpo/update/{id}', [App\Http\Controllers\Api\CPO\StockAwalCpoController::class, 'update']);
 });
 
 Route::group(['middleware' => 'levelnine.checker'], function () {
