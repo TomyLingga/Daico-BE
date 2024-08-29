@@ -99,74 +99,10 @@ class StockAwalCpoController extends Controller
     public function indexDate(Request $request)
     {
         try {
-            $tanggal = $request->tanggal;
-
-            $dataStockAwal = StockAwalCpo::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
-                ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
-                ->orderBy('tanggal')
-                ->first();
-
-            if (is_null($dataStockAwal)) {
-                return response()->json(['message' => $this->messageMissing], 401);
-            }
-
-            $dataStockAwal->value = $dataStockAwal->qty * $dataStockAwal->harga;
-
-            $dataIncoming = actualIncomingCpo::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
-                ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
-                ->orderBy('tanggal')
-                ->get();
-
-            if ($dataIncoming->isEmpty()) {
-                return response()->json(['message' => $this->messageMissing], 401);
-            }
-
-            $totalQty = 0;
-            $totalValue = 0;
-            $latestTanggal = null;
-
-            $dataIncoming->transform(function ($item) use (&$totalQty, &$totalValue, &$latestTanggal) {
-                $item['value'] = $item->qty * $item->harga;
-                $totalQty += $item->qty;
-                $totalValue += $item['value'];
-
-                if (is_null($latestTanggal) || $item->tanggal > $latestTanggal) {
-                    $latestTanggal = $item->tanggal;
-                }
-
-                return $item;
-            });
-
-            $totalHarga = ($totalQty > 0) ? $totalValue / $totalQty : 0;
-
-            $stokTersediaQty = $dataStockAwal->qty + $totalQty;
-            $stokTersediaValue = $dataStockAwal->value + $totalValue;
-            $stokTersediaHarga = ($stokTersediaQty > 0) ? $stokTersediaValue / $stokTersediaQty : 0;
-
-
-            $dataLaporanProduksi = $this->indexLaporanProduksi($request);
-            $qtyCpoOlah = $dataLaporanProduksi['laporanProduksi'][0]['uraian'][0]['total_qty'];
-            $hargaCpoOlah = $stokTersediaHarga;
-            $valueCpoOlah = $qtyCpoOlah * $hargaCpoOlah;
+            $data = $this->processStockAwalCpo($request);
 
             return response()->json([
-                'dataStockAwal' => $dataStockAwal,
-                'dataIncoming' => [
-                    'latestDate' => $latestTanggal,
-                    'totalQty' => $totalQty,
-                    'totalHarga' => $totalHarga,
-                    'totalValue' => $totalValue
-                ],
-                'stokTersedia' => [
-                    'totalQty' => $stokTersediaQty,
-                    'totalHarga' => $stokTersediaHarga,
-                    'totalValue' => $stokTersediaValue
-                ],
-                'cpoOlah' => [
-                    'totalQty' => $qtyCpoOlah,
-                    'totalHarga' => $hargaCpoOlah,
-                    'totalValue' => $valueCpoOlah
-                ],
+                'data' => $data,
                 'message' => $this->messageAll,
             ], 200);
 

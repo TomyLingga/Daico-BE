@@ -74,6 +74,8 @@ class MainDashboardController extends Controller
 
             $dataStokRetail = $this->latestStokRetail();
 
+            $dataStockAwalCpo = $this->processStockAwalCpo($request);
+
 
             return response()->json([
                 'avgJisdor' => $avgRate,
@@ -90,6 +92,7 @@ class MainDashboardController extends Controller
                 'totalCash' => $totalCash,
                 'dataStokBulky' => $dataStokBulky,
                 'dataStokRetail' => $dataStokRetail,
+                'dataStockAwalCpo' => $dataStockAwalCpo,
             ], 200);
 
         } catch (\Exception $e) {

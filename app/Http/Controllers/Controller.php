@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\actualIncomingCpo;
 use App\Models\BiayaPenyusutan;
 use App\Models\cpoKpbn;
 use App\Models\DailyDMO;
@@ -13,6 +14,7 @@ use App\Models\LevyDutyBulky;
 use App\Models\MarketRoutersBulky;
 use App\Models\MonthlyDMO;
 use App\Models\Setting;
+use App\Models\StockAwalCpo;
 use App\Models\StokBulky;
 use App\Models\StokRetail;
 use App\Models\TargetReal;
@@ -4988,6 +4990,79 @@ class Controller extends BaseController
         return [
             'GrandTotal' => $grandTotal,
             'bulkyStock' => $bulkyStock,
+        ];
+    }
+
+    public function processStockAwalCpo($request)
+    {
+        $tanggal = $request->tanggal;
+
+        $dataStockAwal = StockAwalCpo::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
+            ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
+            ->orderBy('tanggal')
+            ->first();
+
+        if (is_null($dataStockAwal)) {
+            return response()->json(['message' => $this->messageMissing], 401);
+        }
+
+        $dataStockAwal->value = $dataStockAwal->qty * $dataStockAwal->harga;
+
+        $dataIncoming = actualIncomingCpo::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
+            ->whereMonth('tanggal', '=', date('m', strtotime($tanggal)))
+            ->orderBy('tanggal')
+            ->get();
+
+        if ($dataIncoming->isEmpty()) {
+            return response()->json(['message' => $this->messageMissing], 401);
+        }
+
+        $totalQty = 0;
+        $totalValue = 0;
+        $latestTanggal = null;
+
+        $dataIncoming->transform(function ($item) use (&$totalQty, &$totalValue, &$latestTanggal) {
+            $item['value'] = $item->qty * $item->harga;
+            $totalQty += $item->qty;
+            $totalValue += $item['value'];
+
+            if (is_null($latestTanggal) || $item->tanggal > $latestTanggal) {
+                $latestTanggal = $item->tanggal;
+            }
+
+            return $item;
+        });
+
+        $totalHarga = ($totalQty > 0) ? $totalValue / $totalQty : 0;
+
+        $stokTersediaQty = $dataStockAwal->qty + $totalQty;
+        $stokTersediaValue = $dataStockAwal->value + $totalValue;
+        $stokTersediaHarga = ($stokTersediaQty > 0) ? $stokTersediaValue / $stokTersediaQty : 0;
+
+
+        $dataLaporanProduksi = $this->indexLaporanProduksi($request);
+        $qtyCpoOlah = $dataLaporanProduksi['laporanProduksi'][0]['uraian'][0]['total_qty'];
+        $hargaCpoOlah = $stokTersediaHarga;
+        $valueCpoOlah = $qtyCpoOlah * $hargaCpoOlah;
+
+        return [
+            'dataStockAwal' => $dataStockAwal,
+            'dataIncoming' => [
+                'latestDate' => $latestTanggal,
+                'totalQty' => $totalQty,
+                'totalHarga' => $totalHarga,
+                'totalValue' => $totalValue
+            ],
+            'stokTersedia' => [
+                'totalQty' => $stokTersediaQty,
+                'totalHarga' => $stokTersediaHarga,
+                'totalValue' => $stokTersediaValue
+            ],
+            'cpoOlah' => [
+                'totalQty' => $qtyCpoOlah,
+                'totalHarga' => $hargaCpoOlah,
+                'totalValue' => $valueCpoOlah
+            ]
         ];
     }
 }
