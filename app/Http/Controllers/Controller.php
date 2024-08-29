@@ -4913,7 +4913,7 @@ class Controller extends BaseController
         $subquery = StokBulky::select('tank_id', DB::raw('MAX(tanggal) as max_tanggal'))
                 ->groupBy('tank_id');
 
-            $data = StokBulky::with('productable', 'tank')
+            $data = StokBulky::with(['productable', 'tank.location'])
                 ->joinSub($subquery, 'latest_entries', function($join) {
                     $join->on('stok_bulky.tank_id', '=', 'latest_entries.tank_id')
                         ->on('stok_bulky.tanggal', '=', 'latest_entries.max_tanggal');
