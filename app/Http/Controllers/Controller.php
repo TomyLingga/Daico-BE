@@ -155,32 +155,33 @@ class Controller extends BaseController
     }
 
     public function formatLogs($logs)
-    {
-        return $logs->map(function ($log) {
-            $user = $this->getUserById($log->user_id);
-            $oldData = json_decode($log->old_data, true);
-            $newData = json_decode($log->new_data, true);
+{
+    return $logs->map(function ($log) {
+        $user = $this->getUserById($log->user_id);
+        $oldData = json_decode($log->old_data, true);
+        $newData = json_decode($log->new_data, true);
 
-            $changes = [];
-            if ($log->action === 'update') {
-                $changes = collect($newData)->map(function ($value, $key) use ($oldData) {
-                    if ($oldData[$key] !== $value) {
-                        return [
-                            'old' => $oldData[$key],
-                            'new' => $value,
-                        ];
-                    }
-                })->filter();
-            }
+        $changes = [];
+        if ($log->action === 'update') {
+            $changes = collect($newData)->map(function ($value, $key) use ($oldData) {
+                if ($oldData[$key] !== $value) {
+                    return [
+                        'old' => $oldData[$key],
+                        'new' => $value,
+                    ];
+                }
+            })->filter();
+        }
 
-            return [
-                'action' => $log->action,
-                'user_name' => $user['name'],
-                'changes' => $changes,
-                'created_at' => $log->created_at,
-            ];
-        })->sortByDesc('created_at');
-    }
+        return [
+            'action' => $log->action,
+            'user_name' => $user['name'],
+            'changes' => $changes,
+            'created_at' => $log->created_at,
+        ];
+    })->sortByDesc('created_at')->values()->all();
+}
+
 
     public function formatLogsForMultiple($logs)
     {
