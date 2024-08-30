@@ -348,6 +348,7 @@ class Controller extends BaseController
 
         foreach ($penyusutan as $item) {
             $unitQty[] = [
+                'id' => $item->id,
                 'name' => $item->allocation->nama,
                 'value' => $item->value,
             ];
