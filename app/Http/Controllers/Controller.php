@@ -1722,7 +1722,6 @@ class Controller extends BaseController
         $filteredCurrencyRates = $currencyRates->filter(function ($rate) use ($tanggalValues) {
             return $tanggalValues->contains($rate['name']);
         });
-
         // Calculate the average rate from the filtered currency rates
         $averageCurrencyRate = $filteredCurrencyRates->avg('rate');
 
