@@ -29,18 +29,35 @@ class MainDashboardController extends Controller
                     ->orderBy('tanggal')
                     ->get();
 
-            $avgCpoKpbnMtd = collect($cpoKpbn)->avg('avg');
+            $allMonths = collect([
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ]);
 
             $cpoKpbnByMonth = $cpoKpbn->groupBy(function ($item) {
-                return date('F', strtotime($item->tanggal));
+                return date('F', strtotime($item->tanggal)); // Group by month name
             })
             ->map(function ($group) {
                 return [
-                    'month' => date('F', strtotime($group->first()->tanggal)),
-                    'avg' => $group->avg('avg'),
-                    'records' => $group
+                    'month' => date('F', strtotime($group->first()->tanggal)), // Convert tanggal to DateTime and get the month name
+                    'avg' => $group->avg('avg'), // Calculate the average for 'avg'
+                    'records' => $group, // All records for the month
                 ];
-            })->values();
+            });
+
+            // Step 4: Merge with all months and set default values for missing months
+            $cpoKpbnByMonth = $allMonths->map(function ($month) use ($cpoKpbnByMonth) {
+                return $cpoKpbnByMonth->get($month, [
+                    'month' => $month,
+                    'avg' => 0, // Default average to 0 if no records
+                    'records' => collect([]), // Empty collection if no records
+                ]);
+            });
+
+            // Optional: Convert to array if needed
+            $cpoKpbnByMonth = $cpoKpbnByMonth->values()->all();
+
+            $avgCpoKpbnMtd = collect($cpoKpbn)->avg('avg');
 
             $settingNames = ['coa_bahan_baku_mr'];
 
