@@ -1779,12 +1779,14 @@ class Controller extends BaseController
     protected function calculateMarketExcludedLevyDuty($dataMRouters, $dataLDuty, $currencies)
     {
         return $dataMRouters->map(function ($router) use ($dataLDuty, $currencies) {
-            // $levyDuty = $dataLDuty->firstWhere('tanggal', $router->tanggal);
-            $levyDuty = $dataLDuty->firstWhere(function ($item) use ($router) {
-                return $item->tanggal === $router->tanggal && $item->id_bulky === $router->id_bulky;
-            });
-            $excludedValue = $router->nilai - ($levyDuty->nilai ?? 0);
+            $levyDuty = $dataLDuty->firstWhere('tanggal', $router->tanggal);
 
+            if ($levyDuty) {
+                $levyDuty = $levyDuty->where('id_bulky', $router->id_bulky)->first();
+            }
+
+            $excludedValue = $router->nilai - ($levyDuty->nilai ?? 0);
+            // dd($excludedValue);
             if (empty($router->nilai) || $router->nilai == 0) {
                 $excludedValue = 0;
             }
