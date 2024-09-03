@@ -31,6 +31,17 @@ class MainDashboardController extends Controller
 
             $avgCpoKpbnMtd = collect($cpoKpbn)->avg('avg');
 
+            $cpoKpbnByMonth = $cpoKpbn->groupBy(function ($item) {
+                return date('F', strtotime($item->tanggal));
+            })
+            ->map(function ($group) {
+                return [
+                    'month' => date('F', strtotime($group->first()->tanggal)),
+                    'avg' => $group->avg('avg'),
+                    'records' => $group
+                ];
+            })->values();
+
             $settingNames = ['coa_bahan_baku_mr'];
 
             $dataCostProd = $this->processCostProdPeriod($request, $settingNames);
@@ -93,6 +104,7 @@ class MainDashboardController extends Controller
                 'dataStokBulky' => $dataStokBulky,
                 'dataStokRetail' => $dataStokRetail,
                 'dataStockAwalCpo' => $dataStockAwalCpo,
+                'cpoKpbnByMonth' => $cpoKpbnByMonth,
             ], 200);
 
         } catch (\Exception $e) {
