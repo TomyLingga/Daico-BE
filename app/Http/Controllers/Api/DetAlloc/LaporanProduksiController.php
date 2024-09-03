@@ -52,9 +52,14 @@ class LaporanProduksiController extends Controller
 
             UraianProduksi::findOrFail($request->id_uraian);
 
-            $existingLaporan = LaporanProduksi::where('id_uraian', $request->id_uraian)
-                ->where('tanggal', $request->tanggal)
-                ->first();
+            $query = LaporanProduksi::where('id_uraian', $request->id_uraian)
+            ->where('tanggal', $request->tanggal);
+
+            if ($request->has('id_plant')) {
+                $query->where('id_plant', $request->id_plant);
+            }
+
+            $existingLaporan = $query->first();
 
             if ($existingLaporan) {
                 return response()->json([
@@ -106,7 +111,6 @@ class LaporanProduksiController extends Controller
         DB::beginTransaction();
 
         try {
-
             $rules = [
                 'id_uraian' => 'required|integer',
                 'tanggal' => 'required|date',
@@ -125,11 +129,29 @@ class LaporanProduksiController extends Controller
             if ($request->has('id_plant')) {
                 Plant::findOrFail($request->id_plant);
             }
+
             UraianProduksi::findOrFail($request->id_uraian);
 
+            $query = LaporanProduksi::where('id_uraian', $request->id_uraian)
+                ->where('tanggal', $request->tanggal)
+                ->where('id', '!=', $id);
+
+            if ($request->has('id_plant')) {
+                $query->where('id_plant', $request->id_plant);
+            }
+
+            $existingLaporan = $query->first();
+
+            if ($existingLaporan) {
+                return response()->json([
+                    'message' => 'A record with the same tanggal and id_uraian already exists.',
+                    'success' => false,
+                ], 409);
+            }
+
             $latestHargaSatuan = HargaSatuanProduksi::where('id_uraian_produksi', $request->id_uraian)
-            ->orderBy('created_at', 'desc')
-            ->first();
+                ->orderBy('created_at', 'desc')
+                ->first();
 
             if (!$latestHargaSatuan) {
                 return response()->json([
