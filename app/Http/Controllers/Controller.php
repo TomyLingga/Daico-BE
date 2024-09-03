@@ -1784,7 +1784,7 @@ class Controller extends BaseController
                 return $item->tanggal === $router->tanggal && $item->id_bulky === $router->id_bulky;
             });
             $excludedValue = $router->nilai - ($levyDuty->nilai ?? 0);
-            dd($excludedValue);
+
             if (empty($router->nilai) || $router->nilai == 0) {
                 $excludedValue = 0;
             }
