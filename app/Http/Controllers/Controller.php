@@ -1717,7 +1717,15 @@ class Controller extends BaseController
         $setting = $this->getSetting('pembagi_market_idr');
 
         $marketExcludedLevyDuty = $this->calculateMarketExcludedLevyDuty($dataMRouters, $dataLDuty, $currencies);
-        $averageCurrencyRate = $currencyRates->avg('rate');
+        $tanggalValues = $marketExcludedLevyDuty->pluck('tanggal')->unique();
+
+        $filteredCurrencyRates = $currencyRates->filter(function ($rate) use ($tanggalValues) {
+            return $tanggalValues->contains($rate['name']);
+        });
+
+        // Calculate the average rate from the filtered currency rates
+        $averageCurrencyRate = $filteredCurrencyRates->avg('rate');
+
         $averageCpoKpbn = $dataCpoKpbn->avg('avg');
 
         $averageDataMRoutersPerBulky = $this->calculateAveragePerBulky($dataMRouters);
