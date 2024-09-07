@@ -9,6 +9,7 @@ use App\Models\outstandingCpo;
 use App\Models\RekeningUnitKerja;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class MainDashboardController extends Controller
 {
@@ -25,37 +26,100 @@ class MainDashboardController extends Controller
 
             $mandiriRate = KursMandiri::orderBy('tanggal', 'desc')->first();
 
-            $cpoKpbn = cpoKpbn::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
-                    ->orderBy('tanggal')
-                    ->get();
+            // $cpoKpbn = cpoKpbn::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
+            //         ->orderBy('tanggal')
+            //         ->get();
 
+            // $allMonths = collect([
+            //     'January', 'February', 'March', 'April', 'May', 'June',
+            //     'July', 'August', 'September', 'October', 'November', 'December'
+            // ]);
+
+            // $cpoKpbnByMonth = $cpoKpbn->groupBy(function ($item) {
+            //     return date('F', strtotime($item->tanggal)); // Group by month name
+            // })
+            // ->map(function ($group) {
+            //     return [
+            //         'month' => date('F', strtotime($group->first()->tanggal)),
+            //         'avg' => $group->avg('avg'),
+            //         'records' => $group,
+            //     ];
+            // });
+
+            // $cpoKpbnByMonth = $allMonths->map(function ($month) use ($cpoKpbnByMonth) {
+            //     return $cpoKpbnByMonth->get($month, [
+            //         'month' => $month,
+            //         'avg' => 0,
+            //         'records' => collect([]),
+            //     ]);
+            // });
+
+            // $cpoKpbnByMonth = $cpoKpbnByMonth->values()->all();
+            $cpoKpbn = cpoKpbn::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
+                ->orderBy('tanggal')
+                ->get();
+
+            // Define all months and days in the selected year
             $allMonths = collect([
                 'January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'
             ]);
 
+            // Group records by month
             $cpoKpbnByMonth = $cpoKpbn->groupBy(function ($item) {
                 return date('F', strtotime($item->tanggal)); // Group by month name
-            })
-            ->map(function ($group) {
+            })->map(function ($group) {
+                // Calculate the average for actual records only (skip null entries later)
+                $validRecords = $group->filter(function ($record) {
+                    return !is_null($record->id); // Only use records with valid ids
+                });
+
                 return [
-                    'month' => date('F', strtotime($group->first()->tanggal)), // Convert tanggal to DateTime and get the month name
-                    'avg' => $group->avg('avg'), // Calculate the average for 'avg'
-                    'records' => $group, // All records for the month
+                    'month' => date('F', strtotime($group->first()->tanggal)),
+                    'avg' => $validRecords->avg('avg'), // Calculate avg for valid records
+                    'records' => $group,
                 ];
             });
 
-            // Step 4: Merge with all months and set default values for missing months
+            // Create all months with default values for missing dates
             $cpoKpbnByMonth = $allMonths->map(function ($month) use ($cpoKpbnByMonth) {
                 return $cpoKpbnByMonth->get($month, [
                     'month' => $month,
-                    'avg' => 0, // Default average to 0 if no records
-                    'records' => collect([]), // Empty collection if no records
-                ]);
+                    'avg' => 0,
+                    'records' => collect([]),
+                ])->map(function ($group) {
+                    // Add missing dates in each month, with default 'id' => null and 'avg' => 0
+                    $filledRecords = collect();
+                    $firstDate = Carbon::parse("first day of {$group['month']}")->startOfMonth();
+                    $lastDate = $firstDate->copy()->endOfMonth();
+
+                    for ($date = $firstDate; $date <= $lastDate; $date->addDay()) {
+                        $record = $group['records']->firstWhere('tanggal', $date->format('Y-m-d'));
+
+                        $filledRecords->push($record ? $record : [
+                            'id' => null,
+                            'tanggal' => $date->format('Y-m-d'),
+                            'avg' => 0,
+                            'created_at' => null,
+                            'updated_at' => null
+                        ]);
+                    }
+
+                    // Recalculate the actual average excluding missing records
+                    $validRecords = $filledRecords->filter(function ($record) {
+                        return !is_null($record['id']); // Only valid records for avg calculation
+                    });
+
+                    return [
+                        'month' => $group['month'],
+                        'avg' => $validRecords->avg('avg'), // Recalculate the average for valid records
+                        'records' => $filledRecords, // Use the filled records with missing dates included
+                    ];
+                });
             });
 
-            // Optional: Convert to array if needed
             $cpoKpbnByMonth = $cpoKpbnByMonth->values()->all();
+
 
             $avgCpoKpbnMtd = collect($cpoKpbn)->avg('avg');
 
