@@ -121,6 +121,7 @@ Route::get('kurs-mandiri', [App\Http\Controllers\Api\Config\KursMandiriControlle
 Route::get('kurs-mandiri/get/{id}', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'show']);
 Route::post('kurs-mandiri/date', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'indexDate']);
 Route::get('kurs-mandiri/latest', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'indexLatest']);
+Route::post('kurs-mandiri/latest-month', [App\Http\Controllers\Api\Config\KursMandiriController::class, 'indexLatestWithMonth']);
 
 //Jenis Rekening
 Route::get('jenis-rekening', [App\Http\Controllers\Api\Config\MasterJenisRekeningController::class, 'index']);

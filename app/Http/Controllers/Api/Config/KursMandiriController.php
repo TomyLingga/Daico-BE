@@ -100,6 +100,35 @@ class KursMandiriController extends Controller
         }
     }
 
+    public function indexLatestWithMonth(Request $request)
+    {
+        try {
+            $tanggal = $request->tanggal ?? now();
+
+            $year = date('Y', strtotime($tanggal));
+            $month = date('m', strtotime($tanggal));
+
+            $data = KursMandiri::whereYear('tanggal', $year)
+                            ->whereMonth('tanggal', $month)
+                            ->orderBy('tanggal', 'desc')
+                            ->first();
+
+            if (!$data) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
+
+            return response()->json(['data' => $data, 'message' => $this->messageAll], 200);
+
+        } catch (QueryException $e) {
+            return response()->json([
+                'message' => $this->messageFail,
+                'err' => $e->getTrace()[0],
+                'errMsg' => $e->getMessage(),
+                'success' => false,
+            ], 500);
+        }
+    }
+
     public function indexDate(Request $request)
     {
         try {
