@@ -18,6 +18,8 @@ class MainDashboardController extends Controller
     {
         try {
             $tanggal = $request->tanggal;
+            $year = date('Y', strtotime($tanggal));
+            $month = date('m', strtotime($tanggal));
 
             $currencyRates = $this->getRateCurrencyData($tanggal, 'USD');
 
@@ -25,7 +27,10 @@ class MainDashboardController extends Controller
 
             $latestRate = collect($currencyRates)->last()['rate'];
 
-            $mandiriRate = KursMandiri::orderBy('tanggal', 'desc')->first();
+            $mandiriRate = KursMandiri::whereYear('tanggal', $year)
+                            ->whereMonth('tanggal', $month)
+                            ->orderBy('tanggal', 'desc')
+                            ->first();
 
             // $cpoKpbn = cpoKpbn::whereYear('tanggal', '=', date('Y', strtotime($tanggal)))
             //         ->orderBy('tanggal')
