@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\cpoKpbn;
 use App\Models\KursMandiri;
+use App\Models\MasterTipeRekening;
 use App\Models\outstandingCpo;
 use App\Models\RekeningUnitKerja;
 use Illuminate\Http\Request;
@@ -171,7 +172,10 @@ class MainDashboardController extends Controller
 
             $dataStockAwalCpo = $this->processStockAwalCpo($request);
 
-
+            $dataTipeRekening = MasterTipeRekening::all();
+            if ($dataTipeRekening->isEmpty()) {
+                return response()->json(['message' => $this->messageMissing], 401);
+            }
             return response()->json([
                 'avgJisdor' => $avgRate,
                 'lastDayJisdor' => $latestRate,
@@ -183,6 +187,7 @@ class MainDashboardController extends Controller
                 'dataTarget' => $dataTarget,
                 'dataProCost' => $dataProCost['data'],
                 'dataOutstanding' => $dataOutstanding,
+                'dataTipeRekening' => $dataTipeRekening,
                 'dataCash' => $dataCash,
                 'totalCash' => $totalCash,
                 'dataStokBulky' => $dataStokBulky,
